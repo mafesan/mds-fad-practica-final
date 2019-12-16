@@ -1,0 +1,10 @@
+---
+title: "Práctica Métodos de Análisis de datos"
+author: "Edgli Morales, David Ruiz y Miguel Ángel Fernández - Máster en Data Science, URJC"
+date: "Diciembre de 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
