@@ -8,3 +8,49 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r init, include=FALSE}
+# Cargamos los paquetes que vamos a usar en el informe
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(egg)
+library(GGally)
+
+library(ISLR)
+library(car)
+library(DMwR2)
+library(faraway)
+library(mlbench)
+
+library(knitr)
+library(kableExtra)
+library(htmltools)
+library(bsplus)
+library(RColorBrewer)
+library(VIM)
+library(mice)
+
+# Koki
+library(data.table)
+library(corrplot)
+library(GGally)
+library(tidyverse)
+library(PerformanceAnalytics)
+library(plotly)
+
+# Seed
+set.seed(3)
+```
+
+# Introducción 
+
+El conjunto de datos que se analiza en esta práctica trata sobre información acerca de aplicaciones móviles disponibles en el *App Store*, la tienda de aplicaciones de *Apple*.
+
+```{r read_file}
+data_apps = read.csv("AppleStore.csv")
+```
