@@ -1,0 +1,349 @@
+---
+title: "Práctica Métodos de Análisis de datos"
+author: "Edgli Morales, David Ruiz y Miguel Ángel Fernández - Máster en Data Science, URJC"
+date: "Diciembre de 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r init, include=FALSE}
+# Cargamos los paquetes que vamos a usar en el informe
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(egg)
+library(GGally)
+
+library(ISLR)
+library(car)
+library(DMwR2)
+library(faraway)
+library(mlbench)
+
+library(knitr)
+library(kableExtra)
+library(htmltools)
+library(bsplus)
+library(RColorBrewer)
+library(VIM)
+library(mice)
+
+# Koki
+library(data.table)
+library(corrplot)
+library(GGally)
+library(tidyverse)
+library(PerformanceAnalytics)
+library(plotly)
+
+# Seed
+set.seed(3)
+```
+
+# Introducción 
+
+El conjunto de datos que se analiza en esta práctica trata sobre información acerca de aplicaciones móviles disponibles en el *App Store*, la tienda de aplicaciones de *Apple*.
+
+```{r read_file}
+data_apps = read.csv("AppleStore.csv")
+```
+
+# Valores faltantes
+
+Al realizar un análisis preliminar de los datos, observamos que no hay valores faltantes. 
+```{r comprobar_na}
+sum(is.na(data_apps))
+```
+
+Antes de empezar a trabajar con los datos en más profundidad, vamos a simular estos datos faltantes. Primero, vamos a generar un gran porcentaje de valores faltantes en una de las variables, "`currency`", que indica la divisa del precio de la aplicación. El procentaje de valores faltantes será en este caso de un 80\%.
+
+```{r generate_missing_currency}
+num_filas <- nrow(data_apps)
+porcentaje_missing <- 80
+num_missing <- round((num_filas * porcentaje_missing)/100)
+pos_missing <- sort(sample(1:num_filas, num_missing, replace=FALSE))
+
+data_apps$currency[c(pos_missing)] <- NA
+```
+
+Aunque en los datos originales todos los valores de esta columna son `USD` (dólares estadounidenses), simulamos que nos faltan tantos valores de esta variable que la hace prácticamente inusable en cuanto a la información que nos proporciona.
+
+En una situación en la que tenemos datos del precio pero no sabemos la divisa en la que está ese valor, hemos decidido crear una variable categorizando las aplicaciones como gratuitas o de pago.
+
+A continuación, generamos valores faltantes en las variables `user_rating` y `user_rating_ver`, que describen la valoración media de los usuarios en estrellas (valor de 0 a 5) para todas las versiones de la aplicación y sólo para la última versión, respectivamente.
+
+En este caso, generamos un 12\% de valores faltantes para `user_rating` y un 8% para `user_rating_ver`.
+
+```{r generate_missing_user_rating}
+num_filas <- nrow(data_apps)
+porcentaje_missing <- 12
+num_missing <- round((num_filas * porcentaje_missing)/100)
+
+pos_missing <- sort(sample(1:num_filas, num_missing, replace=FALSE))
+data_apps$user_rating[c(pos_missing)] <- NA
+
+porcentaje_missing <- 8
+num_missing <- round((num_filas * porcentaje_missing)/100)
+
+pos_missing <- sort(sample(1:num_filas, num_missing, replace=FALSE))
+data_apps$user_rating_ver[c(pos_missing)] <- NA
+```
+
+Una vez que hemos generado los valores faltantes, vamos a representar estos valores en un histograma y cómo se distribuyen en el conjunto.
+
+```{r repr_valores_missing}
+aggr_plot <- aggr(data_apps, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE,
+                  labels=names(data_apps), cex.axis=.7, gap=3, 
+                  ylab=c("Histograma de datos faltantes","Patrón"))
+```
+
+(Comentar los gráficos)
+
+```{r repr_variables_missing}
+data_apps %>% select(user_rating, user_rating_ver) %>% marginplot()
+```
+
+(Comentar los gráficos)
+
+## Imputación de valores faltantes
+
+Primero, eliminamos las columnas que no nos interesan:
+```{r eliminar_columnas}
+data_apps_clean <- data_apps %>%
+  select(-c(track_name, currency, ver, vpp_lic))
+```
+
+### Prueba de imputación por K-NN
+```{r repr_imputacion_knn}
+data_apps_clean %>% select(user_rating, user_rating_ver) %>% VIM::kNN() %>% marginplot(., delimiter="_imp")
+```
+
+
+### Imputación usando el paquete MICE
+
+```{r imputacion_datos}
+apps_imp = mice(data_apps_clean, method = "cart", m = 1)
+```
+
+```{r}
+data_apps_imp <- complete(apps_imp)
+```
+
+# Generear conjuntos de entrenamiento, test y validación 
+
+```{r separar_training_test}
+
+# Separamos los datos en los siguientes porcentajes: Train (50), Test (25), Validación (25)
+
+# Obtenemos la muestra del 50% y filtramos por esos elementos
+train = sample(1:nrow(data_apps_clean), .5 * nrow(data_apps_clean), replace = FALSE)
+data_train = data_apps_clean[train,]
+
+# Cogemos el 50% restante y lo dividimos en dos partes iguales para Test y para Validación
+test_validacion = data_apps_clean[-train,]
+test = sample(1:nrow(test_validacion), .5 * nrow(test_validacion), replace = FALSE)
+
+# Filtramos para obtener los otros dos conjuntos
+data_test = test_validacion[test,]
+data_validacion = test_validacion[-test,]
+```
+
+# Análisis exploratorio
+```{r summary}
+summary(data_train)
+
+hist(data_train$user_rating)
+```
+
+```{r initial_plots, warning=FALSE}
+corrplot(cor(data_train %>% 
+               select(price:user_rating_ver, ipadSc_urls.num,
+                      sup_devices.num, lang.num, size_bytes), 
+               use = "complete.obs"), 
+               method = "circle",type = "upper")
+
+stats_apps_cor <- 
+  data_train %>% 
+  select(price:user_rating_ver, ipadSc_urls.num,
+         sup_devices.num, lang.num, size_bytes)
+ggpairs(stats_apps_cor)
+```
+
+
+```{r}
+ggplot(data=data_train, aes(x=sup_devices.num, y = sup_devices.num))+
+  geom_point()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Corroboramos la estructura de los datos
+
+```{r}
+str(data_train)
+```
+
+** aqui creo que seria bueno colocar una tabla con las 12 variable que nos quedamos, su descripcion y que tipo de variable es**
+
+
+
+
+
+#VARIABLES CUANTITATIVAS
+
+
+Procederemos a analizar las variables cuantitativas del data set, de esta manera estudiaremos su comportamiento con el fin de relacionar patrones y poder ajustar su escala (en caso de que sea necesario) con el fin de visualizar mejor su distribución.
+
+
+El *rating_count_tot* que representa el total de calificaciones o reseñas otorgadas a la aplicación de distribuye de la siguiente manera:
+
+
+** falta escribir mas**
+
+
+```{r}
+ggplot(data=data_train, aes(x=rating_count_tot))+
+  geom_histogram(bins=100, color='steelblue', fill='steelblue')
+```
+
+
+Para poder apreciar su distribución aplicaremos un logaritmo que nos permita apreciar mayormente su distribución.
+
+```{r}
+ggplot(data=data_train, aes(x=log10(rating_count_tot)))+
+  geom_histogram(bins=10, color='steelblue', fill='steelblue')
+```
+
+**Notamos que se nos eliminan 929 datos, que pertenecen a los valores 0 de la variable**
+
+Aplicamos log10 +1 para apreciar los valores correspondiente a 0 que se nos han eleminado con el log anterior.
+
+
+```{r}
+ggplot(data=data_train, aes(x=log10(1+(rating_count_tot))))+
+  geom_histogram(bins=10, color='steelblue', fill='steelblue')
+```
+
+** Al analizar el box plot observamos que la mayora de lo
+
+
+```{r}
+ggplot(data=data_train, aes(x= " ", y= log10(1+(rating_count_tot))))+
+  geom_boxplot(color='black', fill='steelblue')
+```
+
+
+
+Analizamos los cuantiles de los datos.
+
+Podemos notar que el comportamiento deñ *rating_count_tot* varia drasticamente, el salto entre el cuantil 95% al 100% varia desde 48107 a 2974676. 
+
+Solo el 0.13% de los datos representan valores mayores de mas del millón.
+
+
+```{r}
+quantile(data_train$rating_count_tot, probs = seq(0,1,0.05))
+```
+
+```{r}
+top_10 <- data_train %>% top_n(10, rating_count_tot)
+(nrow(top_10)/nrow(data_train))*100
+```
+
+
+
+**SIZE BYTE**: Analizaremos la distribución del tamaño de las aplicaciones
+
+
+```{r}
+ggplot(data_train, aes(x=size_bytes)) +
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+```{r}
+ggplot(data_train, aes(x=log10(size_bytes))) +
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+
+**SUP_DEVICE_NUM*: Numero de dispositivos soportados
+
+```{r}
+ggplot(data_train, aes(x=sup_devices.num))+
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+
+
+```{r}
+ggplot(data_train, aes(x=(sup_devices.num)**2))+
+  geom_histogram(bins=30, fill='steelblue')
+```
+
+
+
+Transformamos la variable elevando al cuadrado para visualizar mejor sus valores hacia la izquierda, de igual manera notamos 
+
+```{r}
+ggplot(data_train, aes(x= '', y=(sup_devices.num)**2))+
+  geom_boxplot(fill='steelblue')
+```
+
+
+
+
+**LANG.NUM**: Lenguaje
+
+
+```{r}
+ggplot(data_train, aes(x=(lang.num))) +
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+
+```{r}
+ggplot(data_train, aes(x=log10(1+(lang.num)))) +
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
