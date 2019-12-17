@@ -1,0 +1,201 @@
+---
+title: "Métodos de Análisis de datos"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Cargamos los paquetes necesarios
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2) 
+library(gmodels)
+library(Hmisc)
+library(ggthemes)
+library(R.methodsS3)
+library(R.oo)
+library(R.utils)
+```
+
+## Introducción
+
+Universidad Rey Juan Carlos
+Máster en Data Science
+Práctica Métodos de Análisis de datos
+Curso 2019/2020
+Métodos de Análisis de datos
+
+
+# Práctica
+
+La práctica consistirá en la elaboración y presentación de un informe de un proyecto de Ciencia de
+Datos en R Markdown. Se utilizarán las técnicas aprendidas durante el curso, aplicadas a los datos
+seleccionados. El informe será enviado por uno de los integrantes de cada grupo, a través del aula
+virtual.
+Tened en cuenta que para el correcto desarrollo de un proceso de modelización, se ha de dividir el
+conjunto de datos al inicio del proceso, guardando una partición que sólo será utilizada para la
+validación del modelo final.
+A continuación, se detallan los diferentes apartados evaluables en el desarrollo de la práctica y su
+puntuación. La puntuación completa corresponde al correcto uso, y justificación, de cada una de
+las técnicas empleadas.
+
+
+# Conjunto de datos:
+```{r}
+Apple_Store= read.csv("/home/david/Practicas_master/Limpieza de datos y modelos/AppleStore.csv", header = TRUE, stringsAsFactors = FALSE, sep= ",", encoding = "UTF-8")
+```
+
+# Analisis previos 
+```{r}
+
+```
+# 6. Procesado de variables cualitativas
+
+### Variable Size_bytes
+El principal problema de esta variable es la dificultad de comprensión de los datos, por lo que a través de la transformación dicha variable a MB creamos una nueva variable que sea mas comprensible para el ser humano.
+```{r}
+Mb <- data.frame(Apple_Store$X, Apple_Store$size_bytes)
+
+names(Mb)[names(Mb) == "Apple_Store.X"] <- "X"
+names(Mb)[names(Mb) == "Apple_Store.size_bytes"] <- "size_bytes"
+
+size <- hsize(Mb$size_bytes, standard="SI")
+Mb$size_MB <- size
+
+Mb <- select(Mb, X, size_MB)
+head(Mb)
+# Unimos la nueva columna al Dataframe oroginal
+Apple_Store <- merge (x= Apple_Store, y=Mb, by="X")
+```
+### Rating de edad
+
+La clasificación que sigue apple en este caso, es distinta a la que sigue Google o los sistemas internacionales de clasificación de applicaciones y videojuegos, cómo en el caso europeo "PEGI" o a nivel americano "ESRB", por lo que transformaremos esta variable para que sea más comprensible y para preparar dicha variable para los pasos posteriores.
+
+```{r}
+Rating <- data.frame(Apple_Store$X, Apple_Store$cont_rating)
+
+names(Rating)[names(Rating) == "Apple_Store.X"] <- "X"
+names(Rating)[names(Rating) == "Apple_Store.cont_rating"] <- "cont_rating"
+```
+
+Encontramos 4 niveles de rating en Apple store:
+
+```{r}
+unique(Rating$cont_rating)
+```
+#### Primer nivel: 4+
+- No contiene material objetable, por lo que pueden ser consumidas por niños de hasta 11 años.
+
+#### Segundo nivel: 9+
+- Puede contener ocurrencias leves o infrecuentes de dibujos animados, fantasía o violencia realista, y contenido maduro, sugerente o temático de terror, leve o infrecuente, que puede no ser adecuado para niños menores de 9 años.
+
+#### Tercer nivel: 12+
+- Puede contener dibujos animados frecuentes o intensos, fantasía o violencia realista, temas maduros o sugestivos leves o infrecuentes, mal lenguaje suave o infrecuente, y juegos de azar simulados que pueden no ser adecuados para niños menores de 12 años.
+
+#### Último nivel: 17 +
+- Puede contener lenguaje ofensivo frecuente e intenso, caricaturas excesivas, fantasía o violencia realista, madurez frecuente e intensa, horror, temas sugestivos, contenido sexual, desnudez, alcohol y drogas, o una combinación de cualquiera de estos factores que son inadecuados para personas menores de 17 años de edad. Esto incluye aplicaciones con acceso web sin restricciones. Ninguna persona menor de 16 años puede comprar una aplicación con una calificación de 17+.
+
+```{r}
+table(Rating$cont_rating)
+plot(Rating$cont_rating, col = rainbow(4, start = 0.35, end = 0.6))
+```
+Transformamos la variable cualitativa en variable cuantitativa categorizando y asignando un numero del 0 al 4 para cada categoría del Rating de edad. Lo hacemos de esta manera por la naturaleza de la variable origen, ya que ordena del 4+ al 17+ clasificación de edad y la tranformación lo hace de igual manera estableciendo del 1 al 4 dependiendo de la edad de clasificación.
+
+4+ = Categroría Nº1
+9+ = Categoría Nº2
+12+= Categoría Nº3
+17+= Categoría Nº4
+
+```{r}
+Rating$cat_rating <- 0
+Rating$cat_rating [Rating$cont_rating =="4+"]<- 1
+Rating$cat_rating [Rating$cont_rating =="9+"]<- 2
+Rating$cat_rating [Rating$cont_rating =="12+"]<- 3
+Rating$cat_rating [Rating$cont_rating =="17+"]<- 4
+Rating %>% distinct(cat_rating, cont_rating)
+```
+```{r}
+Rating <- select(Rating,X, cat_rating)
+
+# Unimos la nueva columna al Dataframe original
+Apple_Store <- merge (x= Apple_Store, y=Rating, by="X")
+```
+### Variable Prime_genre
+
+```{r}
+genero <- data.frame(Apple_Store$X, Apple_Store$prime_genre)
+
+names(genero)[names(genero) == "Apple_Store.X"] <- "X"
+names(genero)[names(genero) == "Apple_Store.prime_genre"] <- "genero"
+```
+Dicha variable se divide en varios tipos de applicaciones dependiendo del género de las mismas.Entre ellas encontramos distintas categorías:
+```{r}
+genero_tab<- data.frame(table(genero$genero))
+genero_tab = mutate(genero_tab, percent = Freq/ sum(Freq))
+names(genero_tab)[names(genero_tab) == "Var1"] <- "genero"
+genero_tab
+```
+
+```{r}
+pie(genero_tab$Freq, labels = genero_tab$genero)
+```
+Recategorizamos el género de las aplicaciones en 4 categorías principales, debido a la poca granularidad de la variable:
+
+1. Games.
+2. Lifestyle.
+3. Ulitilies.
+4. Entertainment.
+
+```{r}
+genero$genero_new <- 0
+genero$genero_new [genero$genero == 'Games'] <-"Games"
+genero$genero_new [genero$genero == 'Business'       |genero$genero == 'Catalogs'
+                 |genero$genero == 'Education'       |genero$genero == 'Finance' 
+                 |genero$genero == 'Health & Fitness'|genero$genero == 'Lifestyle'
+                 |genero$genero == 'Medical'         |genero$genero == 'Sports'
+                 |genero$genero == 'Travel']<- "Lifestyle"
+
+genero$genero_new [genero$genero == 'Utilities' |genero$genero == 'Weather'
+                 |genero$genero == 'Navigation' |genero$genero == 'Productivity'
+                 |genero$genero == 'Reference' ]<- "Utilities"
+
+genero$genero_new [genero$genero == 'Entertainment'|genero$genero == 'Book'
+                 |genero$genero == 'Food & Drink'  |genero$genero == 'Music' 
+                 |genero$genero == 'News'          |genero$genero == 'Photo & Video'
+                 |genero$genero == 'Shopping'      |genero$genero =='Social Networking'
+                 ]<- "Entertainment"
+genero_new <- select(genero,X, genero_new)
+unique(genero_new$genero_new)
+```
+
+
+```{r}
+genero_new<- data.frame(table(genero_new$genero_new))
+genero_new = mutate(genero_new, percent = Freq/ sum(Freq))
+names(genero_new)[names(genero_new) == "Var1"] <- "genero"
+genero_new
+```
+```{r}
+pie(genero_new$percent, labels =genero_new$genero)
+```
+
+## Categorización de la variable Count_Rating
+Tras crear las 4 categorías anteriores, crearemos una nueva columna en nuestro datasets por cada categoría, con valores del 1 al 0.
+```{r}
+# Mergeamos con Apple _Store
+genero <- select(genero,X, genero_new)
+Apple_Store <- merge (x= Apple_Store, y=genero, by="X")
+
+Apple_Store$Game_categ <- 0
+Apple_Store$Game_categ [Apple_Store$genero_new == 'Games'] <-1
+
+Apple_Store$Utilities_categ <- 0
+Apple_Store$Utilities_categ [Apple_Store$genero_new == 'Utilities'] <-1
+
+Apple_Store$Entertainment_categ <- 0
+Apple_Store$Entertainment_categ [Apple_Store$genero_new == 'Entertainment'] <-1
+
+Apple_Store$Lifestyle_categ <- 0
+Apple_Store$Lifestyle_categ [Apple_Store$genero_new == 'Lifestyle'] <-1
+
+```
