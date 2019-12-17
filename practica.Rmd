@@ -179,7 +179,70 @@ stats_apps_cor <-
 ggpairs(stats_apps_cor)
 ```
 
-# Procesado de variables cualitativas
+
+# Transformación de variables cuantitativas
+
+Procederemos a analizar las variables cuantitativas del data set, de esta manera estudiaremos su comportamiento con el fin de relacionar patrones y poder ajustar su escala (en caso de que sea necesario) con el fin de visualizar mejor su distribución.
+
+
+## Variable rating_count_tot
+
+El *rating_count_tot* que representa el total de calificaciones o reseñas otorgadas a la aplicación de distribuye de la siguiente manera:
+
+
+** falta escribir mas**
+
+
+```{r}
+ggplot(data=data_train, aes(x=rating_count_tot))+
+  geom_histogram(bins=100, color='steelblue', fill='steelblue')
+```
+
+
+Para poder apreciar su distribución aplicaremos un logaritmo que nos permita apreciar mayormente su distribución.
+
+```{r}
+ggplot(data=data_train, aes(x=log10(rating_count_tot)))+
+  geom_histogram(bins=10, color='steelblue', fill='steelblue')
+```
+
+**Notamos que se nos eliminan 929 datos, que pertenecen a los valores 0 de la variable**
+
+Aplicamos log10 +1 para apreciar los valores correspondiente a 0 que se nos han eleminado con el log anterior.
+
+
+```{r}
+ggplot(data=data_train, aes(x=log10(1+(rating_count_tot))))+
+  geom_histogram(bins=10, color='steelblue', fill='steelblue')
+```
+
+** Al analizar el box plot observamos que la mayora de lo
+
+
+```{r}
+ggplot(data=data_train, aes(x= " ", y= log10(1+(rating_count_tot))))+
+  geom_boxplot(color='black', fill='steelblue')
+```
+
+
+
+Analizamos los cuantiles de los datos.
+
+Podemos notar que el comportamiento deñ *rating_count_tot* varia drasticamente, el salto entre el cuantil 95% al 100% varia desde 48107 a 2974676. 
+
+Solo el 0.13% de los datos representan valores mayores de mas del millón.
+
+
+```{r}
+quantile(data_train$rating_count_tot, probs = seq(0,1,0.05))
+```
+
+```{r}
+top_10 <- data_train %>% top_n(10, rating_count_tot)
+(nrow(top_10)/nrow(data_train))*100
+```
+
+
 
 ## Variable Size_bytes
 
@@ -200,6 +263,65 @@ head(Mb)
 # Unimos la nueva columna al Dataframe oroginal
 data_train <- merge (x= data_train, y=Mb, by="X")
 ```
+
+```{r}
+ggplot(data_train, aes(x=size_MB)) +
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+```{r}
+ggplot(data_train, aes(x=log10(size_MB))) +
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+
+## Variable sup_devices.num
+
+Numero de dispositivos soportados
+
+```{r}
+ggplot(data_train, aes(x=sup_devices.num))+
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+
+
+```{r}
+ggplot(data_train, aes(x=(sup_devices.num)**2))+
+  geom_histogram(bins=30, fill='steelblue')
+```
+
+
+
+Transformamos la variable elevando al cuadrado para visualizar mejor sus valores hacia la izquierda, de igual manera notamos 
+
+```{r}
+ggplot(data_train, aes(x= '', y=(sup_devices.num)**2))+
+  geom_boxplot(fill='steelblue')
+```
+
+
+## Variable lang.num
+
+
+```{r}
+ggplot(data_train, aes(x=(lang.num))) +
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+
+```{r}
+ggplot(data_train, aes(x=log10(1+(lang.num)))) +
+  geom_histogram(bins=10, fill='steelblue')
+```
+
+
+# Procesado de variables cualitativas
+
 
 ## Rating de edad
 
@@ -343,4 +465,5 @@ data_train$Entertainment_categ [data_train$genero_new == 'Entertainment'] <-1
 data_train$Lifestyle_categ <- 0
 data_train$Lifestyle_categ [data_train$genero_new == 'Lifestyle'] <-1
 ```
+
 
