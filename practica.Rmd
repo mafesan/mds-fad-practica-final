@@ -28,8 +28,16 @@ library(kableExtra)
 library(htmltools)
 library(bsplus)
 library(RColorBrewer)
+
 library(VIM)
 library(mice)
+library(R.methodsS3)
+library(R.oo)
+library(R.utils)
+
+library(Hmisc)
+library(ggthemes)
+library(leaps)
 
 # Koki
 library(data.table)
@@ -39,18 +47,10 @@ library(tidyverse)
 library(PerformanceAnalytics)
 library(plotly)
 
-
-# Usados por david
-library(R.methodsS3)
-library(R.oo)
-library(R.utils)
-library(Hmisc)
-library(ggthemes)
-
 # Seed
 set.seed(3)
 
-#Graficos
+# Gráficos
 library(RColorBrewer)
 library(gridExtra)
 ```
@@ -59,9 +59,9 @@ library(gridExtra)
 
 El conjunto de datos que se analiza en esta práctica trata sobre información acerca de aplicaciones móviles disponibles en el *App Store*, la tienda de aplicaciones de *Apple*.
 
-En esta practica se pretende analizar sus variables con el fin de plantear objetivos que aporten valor, utilizando las tecnicas principales para el análisis y modelado de datos
+En esta practica se pretende analizar sus variables con el fin de plantear objetivos que aporten valor, utilizando las técnicas principales para el análisis y modelado de datos
 
-#Analisís explotario inicial - EDA
+# Análisis exploratorio inicial - EDA
 
 ```{r read_file}
 data_apps = read.csv('AppleStore.csv')
@@ -73,7 +73,7 @@ Cargamos los datos y la estructura de los datos
 str(data_apps)
 ```
 
-Observamos que el data set consta de 7197 observaciones, 17 variables, de las cuales aproximadamente 8 son numeros enteros, 5 categoricas y 4 representan valores numéricos.
+Observamos que el data set consta de 7197 observaciones, 17 variables, de las cuales aproximadamente 8 son números enteros, 5 categóricas y 4 representan valores numéricos.
 
 Con la función head visualizamos el nombre de las observaciones y los valores que contiene cada una
 
@@ -85,31 +85,31 @@ head(data_apps)
 
 | VARIABLE                                                         	| DESCRIPCIÓN                                                               	| TIPO DE VARIABLE      	|
 |------------------------------------------------------------------	|---------------------------------------------------------------------------	|-----------------------	|
-| X: Index                                                         	| Indice                                                                    	| none                  	|
-| id: Apple ID                                                     	| Numero de identificación de la app                                        	| CATEGÓRICA            	|
-| track_name: App Name                                             	| Nombre de la aplicación                                                   	| CATEGÓRICA            	|
-| size_bytes: Size (in Bytes)                                      	| Peso de la aplicación en bytes                                            	| CUANTITATIVA CONTINUA 	|
-| currency: Currency Type<br>                                      	| Tipo de Moneda                                                            	| CATEGÓRICA            	|
-| pric: Price amount                                               	| Precio                                                                    	| CUANTITATIVA CONTINUA 	|
-| rating_count_tot: User Rating counts (for all version)           	| Cantidad de Reseñas                                                       	| CUANTITATIVA CONTINUA 	|
-| rating_count_ver: User Rating counts (for current version)       	| Cantidad de Reseñas para la version actual                                	| CUANTITATIVA CONTINUA 	|
-| user_rating: Average User Rating value (for all version)         	| Valor promedio de las Reseñas Totales                                     	| CUANTITATIVA DISCRETA 	|
-| user_rating_ver: Average User Rating value (for current version) 	| Valor promedio de las Reseñas para la versión actual                      	| CUANTITATIVA DISCRETA 	|
-| ver : Latest version code                                        	| Versión actual                                                            	| CATEGÓRICA            	|
-| cont_rating: Content Rating                                      	| Calificación del contenido (Edad)                                         	| CATEGÓRICA            	|
-| prime_genre: Primary Genre                                       	| Genero de la aplicación                                                   	| CATEGÓRICA            	|
-| sup_devices.num: Number of supporting devices                    	| Número de dispositivos soportados                                         	| CUANTITATIVA CONTINUA 	|
-| ipadSc_urls.num": Number of screenshots showed for display       	| Número de capturas de pantalla mostrados antes del acceso a la aplicación 	| CUANTITATIVA CONTINUA 	|
-| lang.num: Number of supported languages                          	| Lenguajes Soportados                                                      	| CUANTITATIVA CONTINUA 	|
-| vpp_lic: Vpp Device Based Licensing Enabled* VPP                 	| Licencia - Compras por Volumen de Apple                                   	| CATEGORICA DICÓTOMAS  	|
+| X: Index                                                         	| Indice                                                                    	| Cuantitativa Discreta  	|
+| id: Apple ID                                                     	| Numero de identificación de la app                                        	| Categórica            	|
+| track_name: App Name                                             	| Nombre de la aplicación                                                   	| Categórica            	|
+| size_bytes: Size (in Bytes)                                      	| Peso de la aplicación en bytes                                            	| Cuantitativa Continua 	|
+| currency: Currency Type<br>                                      	| Tipo de Moneda                                                            	| Categórica            	|
+| pric: Price amount                                               	| Precio                                                                    	| Cuantitativa Continua 	|
+| rating_count_tot: User Rating counts (for all version)           	| Cantidad de Reseñas                                                       	| Cuantitativa Continua 	|
+| rating_count_ver: User Rating counts (for current version)       	| Cantidad de Reseñas para la version actual                                	| Cuantitativa Continua 	|
+| user_rating: Average User Rating value (for all version)         	| Valor promedio de las Reseñas Totales                                     	| Cuantitativa Discreta 	|
+| user_rating_ver: Average User Rating value (for current version) 	| Valor promedio de las Reseñas para la versión actual                      	| Cuantitativa Discreta 	|
+| ver : Latest version code                                        	| Versión actual                                                            	| Categórica            	|
+| cont_rating: Content Rating                                      	| Calificación del contenido (Edad)                                         	| Categórica            	|
+| prime_genre: Primary Genre                                       	| Genero de la aplicación                                                   	| Categórica            	|
+| sup_devices.num: Number of supporting devices                    	| Número de dispositivos soportados                                         	| Cuantitativa Continua 	|
+| ipadSc_urls.num": Number of screenshots showed for display       	| Número de capturas de pantalla mostrados antes del acceso a la aplicación 	| Cuantitativa Continua 	|
+| lang.num: Number of supported languages                          	| Lenguajes Soportados                                                      	| Cuantitativa Continua 	|
+| vpp_lic: Vpp Device Based Licensing Enabled* VPP                 	| Licencia - Compras por Volumen de Apple                                   	| Categórica Binaria    	|
 
 
-## CORRELACIÓN
+## Correlación
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', echo=FALSE, message=FALSE}
 ggcorr(data_apps, low='steelblue', mid='white', high ='lightcoral')
 ```
 
-Al observar la matriz de correlación apreciamos que la mayoria de las variable no se relaciona a un nivel significativo, sin resaltaremos las que guardan cierta corelación positiva:
+Al observar la matriz de correlación apreciamos que la mayoría de las variable no se relaciona a un nivel significativo, sin resaltaremos las que guardan cierta correlación positiva:
 - size_bytes vs sup_devices num: Puede deberse que al ser una aplicación que pueda ser ejecutada para varias versiones su peso ascienda considerablemente
 
 - size_bytes vs ipadSc_urls.num: El peso se aplicación puede influir en el numero screen shot que presenta la aplicación
@@ -122,16 +122,14 @@ Al observar la matriz de correlación apreciamos que la mayoria de las variable 
 
 - ipadSc_urls.num vs user_rating_ver: El numero de screen shot con el user_rating_ver
 
-
-
-# Valores faltantes
+# Detección, tratamiento e imputación de datos faltantes
 
 Al realizar un análisis preliminar de los datos, observamos que no hay valores faltantes.
 ```{r comprobar_na}
 sum(is.na(data_apps))
 ```
 
-Antes de empezar a trabajar con los datos en más profundidad, vamos a simular estos datos faltantes. Primero, vamos a generar un gran porcentaje de valores faltantes en una de las variables, "`currency`", que indica la divisa del precio de la aplicación. El procentaje de valores faltantes será en este caso de un 80\%.
+Antes de empezar a trabajar con los datos en más profundidad, vamos a simular estos datos faltantes. Primero, vamos a generar un gran porcentaje de valores faltantes en una de las variables, "`currency`", que indica la divisa del precio de la aplicación. El porcentaje de valores faltantes será en este caso de un 80\%.
 
 ```{r generate_missing_currency}
 num_filas <- nrow(data_apps)
@@ -196,7 +194,7 @@ data_apps_clean %>% select(user_rating, user_rating_ver) %>% VIM::kNN() %>% marg
 
 ### Imputación usando el paquete MICE
 
-Para realizar la imputación de valores faltantes de las variables `user_rating` y `user_rating_ver` hemos usado el paquete MICE, que incluye múltiples métodos para imputar estos valores. Nosotros hemos aplicado el método `cart`. Este método se basa en árboles de clasificación y regresión. Los modelos CART (*Classification and regression trees*) buscan predictores y puntos en estos predictores donde dividir la muestra. Estos puntos dividen la muestra en más sub-muestras homogénas, y este proceso se repite en las sub-muestras hasta que una serie de divisiones define un árbol binario. Si la variable objetivo es discreta, será un árbol de clasificación mientras que si es contínua será un árbol de regresión.
+Para realizar la imputación de valores faltantes de las variables `user_rating` y `user_rating_ver` hemos usado el paquete MICE, que incluye múltiples métodos para imputar estos valores. Nosotros hemos aplicado el método `cart`. Este método se basa en árboles de clasificación y regresión. Los modelos CART (*Classification and regression trees*) buscan predictores y puntos en estos predictores donde dividir la muestra. Estos puntos dividen la muestra en más sub-muestras homogéneas, y este proceso se repite en las sub-muestras hasta que una serie de divisiones define un árbol binario. Si la variable objetivo es discreta, será un árbol de clasificación mientras que si es continua será un árbol de regresión.
 
 El parámetro `m` indica el número de imputaciones que se van a realizar para poder elegir cuál es la que finalmente se aplica. En este caso, `m` vale 1 ya que sólo queremos que la imputación se realice una vez.
 
@@ -208,7 +206,7 @@ apps_imp = mice(data_apps_clean, method = "cart", m = 1)
 data_apps_imp <- complete(apps_imp)
 ```
 
-# Generear conjuntos de entrenamiento, test y validación
+# Generar conjuntos de entrenamiento, test y validación
 
 ```{r separar_training_test}
 
@@ -227,7 +225,35 @@ data_test = test_validacion[test,]
 data_validacion = test_validacion[-test,]
 ```
 
-# Análisis exploratorio
+# Definición de objetivos
+
+Al observar las variables con las que cuenta el dataset, nos resulta interesante la variable `rating_count_tot` la cual contabiliza el numero de calificaciones y/o reseñas que ha recibido la aplicación. Aunque no tenemos el dato del número de descargas, la variable `rating_count_tot` seguramente tendrá una correlación fuerte con el dato del número de descargas (dato que no facilita Apple de manera pública). Podemos asumir que el número de calificaciones que ha recibido la aplicación corresponde a un número de usuarios que ha descargado la aplicación y que además es un usuario activo de dicha aplicación, por lo que esta variable nos resulta interesante como una aproximación de su número de descargas.
+
+Dicho esto, el objetivo general que nos gustaría alcanzar analizando este conjunto de datos es obtener un modelo que prediga cuántas valoraciones va a obtener una aplicación en función de una serie de variables. Además, buscamos encontrar qué variables son relevantes a la hora de obtener más o menos reseñas.
+
+Además de este objetivo principal, surgen unos cuantos objetivos secundarios:
+
+*
+*
+*
+
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
+
+top_10 <- data_apps %>% top_n(10,rating_count_tot)
+
+orden = top_10$rating_count_tot %>% order(decreasing = T)
+orden
+top_10$track_name = factor(top_10$track_name, levels = top_10$track_name[orden])
+
+ggplot(top_10, aes(x=top_10$track_name , y=top_10$rating_count_tot))+
+  geom_bar(stat = 'identity', color = 'steelblue', fill='steelblue')+
+  labs(x = "Nombre de la APP", y = "Num Total de Calificaciones", title = "APP VS")+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size =10), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(face = "bold", size = 12, angle = 45, hjust = 1), axis.text.y = element_text(face = "bold", size = 12))
+
+```
+
+El top-10 de variables con el mayor numero de calificaciones corroboramos que el numero de usuarios que califican la aplicación se corresponde a las variables con mas "éxito" en la actualidad.
+
 ```{r summary}
 summary(data_train)
 
@@ -247,33 +273,6 @@ stats_apps_cor <-
          sup_devices.num, lang.num, size_bytes)
 ggpairs(stats_apps_cor)
 ```
-
-
-# Definición de Objetivos
-
-
-Al observar las variables con las que cuenta el data set, nos resulta interesante la variable *rating_count_tot* la cual contabiliza el numero de calificaciones y/o reseñas que ha recibido la aplicación, por lo que podemos deducir que el numero de calificaciones corresponde al numero de usuarios activos.
-
-
-
-```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
-
-
-top_10 <- data_apps %>% top_n(10,rating_count_tot)
-
-orden = top_10$rating_count_tot %>% order(decreasing = T)
-orden
-top_10$track_name = factor(top_10$track_name, levels = top_10$track_name[orden])
-
-ggplot(top_10, aes(x=top_10$track_name , y=top_10$rating_count_tot))+
-  geom_bar(stat = 'identity', color = 'steelblue', fill='steelblue')+
-  labs(x = "Nombre de la APP", y = "Num Total de Calificaciones", title = "APP VS")+
-  theme(plot.title = element_text(hjust = 0.5, face="bold", size =10), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(face = "bold", size = 12, angle = 45, hjust = 1), axis.text.y = element_text(face = "bold", size = 12))
-
-```
-
-EL top 10 de variables con el mayor numero de calificaciones corroboramos que el numero de usuarios que califican la aplicación se corresponde a las variables con mas "exito" en la actualidad
-
 
 # Transformación de variables cuantitativas
 
@@ -304,7 +303,7 @@ ggplot(data=data_train, aes(x=log10(rating_count_tot)))+
 
 **Notamos que se nos eliminan 929 datos, que pertenecen a los valores 0 de la variable**
 
-Aplicamos log10 +1 para apreciar los valores correspondiente a 0 que se nos han eleminado con el log anterior.
+Aplicamos log10 +1 para apreciar los valores correspondiente a 0 que se nos han eliminado con el log anterior.
 
 
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
@@ -314,7 +313,7 @@ ggplot(data=data_train, aes(x=log10(1+(rating_count_tot))))+
 ```
 
 
-Analizamos la variable a traves de un box plot para confirmar su distribución
+Analizamos la variable a través de un box plot para confirmar su distribución
 
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data=data_train, aes(x= " ", y= log10(1+(rating_count_tot))))+
@@ -330,7 +329,7 @@ quantile(data_train$rating_count_tot, probs = seq(0,1,0.05))
 ```
 
 
-Podemos notar que el comportamiento de *rating_count_tot* varia drasticamente, el salto entre el cuantil 95% al 100% varia desde 48107 a 2974676.
+Podemos notar que el comportamiento de *rating_count_tot* varia drásticamente, el salto entre el cuantil 95% al 100% varia desde 48107 a 2974676.
 
 Solo el 0.13% de los datos representan valores mayores de mas del millón.
 
@@ -368,7 +367,7 @@ ggplot(data_train, aes(x=size_bytes)) +
   labs(x = "Peso de la Aplicación" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN", subtitle = "Bytes")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
-Observamos que la mayoria se encuentra ubicada hacia el cero, por ende aplicaremos un logaritmo y asi poder apreciar su distribución
+Observamos que la mayoría se encuentra ubicada hacia el cero, por ende aplicaremos un logaritmo y así poder apreciar su distribución
 
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data_train, aes(x=log10(size_bytes))) +
@@ -416,13 +415,12 @@ ggplot(data_train, aes(x=log10(1+(lang.num)))) +
 
 # Procesado de variables cualitativas
 
-
 ## Rating de edad
 
-Existe una clasificación de contenido para las aplicaciones, los estándares más importantes son: A nivel europeo “PEGI” y a nivel americano “ESRB”. Las principales distribuidoras de aplicaciones para móviles, cómo son Apple store o Google play, siguen una clasificación diferente.
+Existe una clasificación de contenido para las aplicaciones, los estándares más importantes son: A nivel europeo “PEGI” y a nivel americano “ESRB”. Las principales distribuidoras de aplicaciones para móviles, cómo son Apple Store o Google Play, siguen una clasificación diferente.
 
 ```{r include=FALSE}
-# Nos quedamos con la variable objetivo y un identificador para mergearlo con la origen tras procesar la variable
+# Nos quedamos con la variable objetivo y un identificador para integrarlo con la origen tras procesar la variable
 Rating <- data.frame(data_train$X, data_train$cont_rating)
 
 names(Rating)[names(Rating) == "data_train.X"] <- "X"
@@ -431,7 +429,7 @@ names(Rating)[names(Rating) == "data_train.cont_rating"] <- "cont_rating"
 
 ### Análisis de la variable.
 
-En el caso que nos ocupa es el de Apple store, que establece 4 clasificaciones:
+En el caso que nos ocupa es el de Apple Store, que establece 4 clasificaciones:
 
 ```{r}
 unique(Rating$cont_rating)
@@ -493,7 +491,7 @@ data_train$cat_4 [data_train$cont_rating == '4+'] <-1
 
 ## Variable Prime_genre
 
-En la plataforma de Apple store, se dividen las aplicaciones en 23 clasificaciones dependiendo del género de las mismas.
+En la plataforma de Apple Store, se dividen las aplicaciones en 23 clasificaciones dependiendo del género de las mismas.
 
 ```{r include=FALSE}
 genero <- data.frame(data_train$X, data_train$prime_genre)
@@ -598,7 +596,7 @@ Lifestyle_genre:
 
 
 ```{r}
-# Mergeamos con Apple _Store y creamos una columna para cada categoría.
+# Integramos con Apple_Store y creamos una columna para cada categoría.
 
 genero <- select(genero,X, genero_new)
 data_train <- merge (x= data_train, y=genero, by="X")
@@ -615,3 +613,19 @@ data_train$Entertainment_genre [data_train$genero_new == 'Entertainment'] <-1
 data_train$Lifestyle_genre <- 0
 data_train$Lifestyle_genre [data_train$genero_new == 'Lifestyle'] <-1
 ```
+
+
+
+# Selección de variables
+
+# Ajuste, interpretación y diagnosis del modelo de regresión lineal múltiple
+
+## Definición del modelo
+
+## Interpretación de resultados
+
+## Diagnósis del modelo
+
+
+
+
