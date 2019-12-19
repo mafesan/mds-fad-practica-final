@@ -64,7 +64,7 @@ En esta practica se pretende analizar sus variables con el fin de plantear objet
 #Analisís explotario inicial - EDA
 
 ```{r read_file}
-data_apps = read.csv('/Users/edgli/Documents/App_Store_Practica/AppleStore.csv')
+data_apps = read.csv('AppleStore.csv')
 ```
 
 Cargamos los datos y la estructura de los datos 
@@ -106,7 +106,7 @@ head(data_apps)
 
 ## CORRELACIÓN
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', echo=FALSE, message=FALSE}
-ggcorr(datos_apps, low='steelblue', mid='white', high ='lightcoral')
+ggcorr(data_apps, low='steelblue', mid='white', high ='lightcoral')
 ```
 
 Al observar la matriz de correlación apreciamos que la mayoria de las variable no se relaciona a un nivel significativo, sin resaltaremos las que guardan cierta corelación positiva:
@@ -194,8 +194,11 @@ data_apps_clean <- data_apps %>%
 data_apps_clean %>% select(user_rating, user_rating_ver) %>% VIM::kNN() %>% marginplot(., delimiter="_imp")
 ```
 
-
 ### Imputación usando el paquete MICE
+
+Para realizar la imputación de valores faltantes de las variables `user_rating` y `user_rating_ver` hemos usado el paquete MICE, que incluye múltiples métodos para imputar estos valores. Nosotros hemos aplicado el método `cart`. Este método se basa en árboles de clasificación y regresión. Los modelos CART (*Classification and regression trees*) buscan predictores y puntos en estos predictores donde dividir la muestra. Estos puntos dividen la muestra en más sub-muestras homogénas, y este proceso se repite en las sub-muestras hasta que una serie de divisiones define un árbol binario. Si la variable objetivo es discreta, será un árbol de clasificación mientras que si es contínua será un árbol de regresión.
+
+El parámetro `m` indica el número de imputaciones que se van a realizar para poder elegir cuál es la que finalmente se aplica. En este caso, `m` vale 1 ya que sólo queremos que la imputación se realice una vez.
 
 ```{r imputacion_datos}
 apps_imp = mice(data_apps_clean, method = "cart", m = 1)
@@ -212,11 +215,11 @@ data_apps_imp <- complete(apps_imp)
 # Separamos los datos en los siguientes porcentajes: Train (50), Test (25), Validación (25)
 
 # Obtenemos la muestra del 50% y filtramos por esos elementos
-train = sample(1:nrow(data_apps_clean), .5 * nrow(data_apps_clean), replace = FALSE)
-data_train = data_apps_clean[train,]
+train = sample(1:nrow(data_apps_imp), .5 * nrow(data_apps_imp), replace = FALSE)
+data_train = data_apps_imp[train,]
 
 # Cogemos el 50% restante y lo dividimos en dos partes iguales para Test y para Validación
-test_validacion = data_apps_clean[-train,]
+test_validacion = data_apps_imp[-train,]
 test = sample(1:nrow(test_validacion), .5 * nrow(test_validacion), replace = FALSE)
 
 # Filtramos para obtener los otros dos conjuntos
@@ -340,6 +343,24 @@ top_10 <- data_train %>% top_n(10, rating_count_tot)
 
 
 ## Variable Size_bytes
+
+El principal problema de esta variable es la dificultad de comprensión de los datos, por lo que a través de la transformación dicha variable a MB creamos una nueva variable que sea mas comprensible para el ser humano.
+
+```{r}
+Mb <- data.frame(data_train$X, data_train$size_bytes)
+names(Mb)[names(Mb) == "data_train.X"] <- "X"
+names(Mb)[names(Mb) == "data_train.size_bytes"] <- "size_bytes"
+
+# Transformamos la variable de bytes a Mb
+
+size <- hsize(Mb$size_bytes, standard="SI")
+Mb$size_MB <- as.numeric(str_replace(size, " MB", ""))
+
+Mb <- select(Mb, X, size_MB)
+head(Mb)
+# Unimos la nueva columna al Dataframe original
+data_train <- merge (x=data_train, y=Mb, by="X")
+```
 
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data_train, aes(x=size_bytes)) +
