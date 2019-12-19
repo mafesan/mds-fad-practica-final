@@ -46,6 +46,7 @@ library(R.oo)
 library(R.utils)
 library(Hmisc)
 library(ggthemes)
+library(dummies)
 
 # Seed
 set.seed(3)
@@ -481,14 +482,14 @@ Para realizar un análisis de regresión, todas las variables deben ser numéric
 
 ```{r}
 # Categorizamos la variable en los 4 niveles.
-data_train$cat_17 <- 0
-data_train$cat_17 [data_train$cont_rating == '17+'] <-1
-data_train$cat_12 <- 0
-data_train$cat_12 [data_train$cont_rating == '12+'] <-1
-data_train$cat_9 <- 0
-data_train$cat_9 [data_train$cont_rating == '9+'] <-1
-data_train$cat_4 <- 0
-data_train$cat_4 [data_train$cont_rating == '4+'] <-1
+# Cargamos los paquetes dummies
+data_train <- cbind(data_train, dummy(data_train$cont_rating))
+
+#Rename
+names(data_train)[names(data_train) == "data_train17+"] <- "rating_17+"
+names(data_train)[names(data_train) == "data_train12+"] <- "rating_12+"
+names(data_train)[names(data_train) == "data_train9+"] <- "rating_9+"
+names(data_train)[names(data_train) == "data_train4+"] <- "rating_4+"
 ```
 
 ## Variable Prime_genre
@@ -603,15 +604,13 @@ Lifestyle_genre:
 genero <- select(genero,X, genero_new)
 data_train <- merge (x= data_train, y=genero, by="X")
 
-data_train$Games_genre <- 0
-data_train$Games_genre [data_train$genero_new == 'Games'] <-1
+data_train <- cbind(data_train, dummy(data_train$genero_new))
 
-data_train$Utilities_genre <- 0
-data_train$Utilities_genre [data_train$genero_new == 'Utilities'] <-1
-
-data_train$Entertainment_genre <- 0
-data_train$Entertainment_genre [data_train$genero_new == 'Entertainment'] <-1
-
-data_train$Lifestyle_genre <- 0
-data_train$Lifestyle_genre [data_train$genero_new == 'Lifestyle'] <-1
+names(data_train)[names(data_train) == "data_trainGames"] <- "Games_genre"
+names(data_train)[names(data_train) == "data_trainLifestyle"] <- "Lifestyle_genre"
+names(data_train)[names(data_train) == "data_trainEntertainment"] <- "Entertainment_genre"
+names(data_train)[names(data_train) == "data_trainUtilities"] <- "Utilities_genre"
 ```
+
+
+
