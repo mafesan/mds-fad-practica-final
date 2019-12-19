@@ -38,6 +38,7 @@ library(R.utils)
 library(Hmisc)
 library(ggthemes)
 library(leaps)
+library(dummies)
 
 # Koki
 library(data.table)
@@ -339,6 +340,12 @@ top_10 <- data_train %>% top_n(10, rating_count_tot)
 (nrow(top_10)/nrow(data_train))*100
 ```
 
+Añadimos la variable transformada al data_train
+
+```{r}
+data_train <- data_train %>% 
+  mutate(rating_count_tot_new = log10(1+rating_count_tot))
+```
 
 
 ## Variable Size_bytes
@@ -375,6 +382,12 @@ ggplot(data_train, aes(x=log10(size_bytes))) +
   labs(x = "Peso de la Aplicación" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN", subtitle = "Log10")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
+Añadimos la variable transformada al data_train
+
+```{r}
+data_train <- data_train %>% 
+  mutate(size_bytes_new = log10(size_bytes))
+```
 
 ## Variable sup_devices.num
 
@@ -389,12 +402,18 @@ Al aplicar potencia cuadrada a esta variable observamos un poco mejor aquellos v
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data_train, aes(x=(sup_devices.num)**2))+
   geom_histogram(bins=30, fill='steelblue')+
-  labs(x = "Peso de la Aplicación" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN", subtitle = "x^2")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
+  labs(x = "Dispositivos Soportados" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN", subtitle = "x^2")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
+Transformamos la variable elevando al cuadrado para visualizar mejor sus valores hacia la izquierda.
 
 
-Transformamos la variable elevando al cuadrado para visualizar mejor sus valores hacia la izquierda, de igual manera notamos
+Añadimos la variable transformada al data_train
+
+```{r}
+data_train <- data_train %>% 
+  mutate(sup_devices_new = (sup_devices.num)**2)
+```
 
 ## Variable lang.num
 
@@ -412,6 +431,13 @@ ggplot(data_train, aes(x=log10(1+(lang.num)))) +
   labs(x = "Nº de Idiomas" , y ="Frecuencia" , title = "HISTOGRAMA Nº IDIOMAS", subtitle = "log10+1")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
+Añadimos la variable transformada al data_train
+
+```{r}
+data_train <- data_train %>% 
+  mutate(lang.num_new = log10(1+(lang.num)))
+         
+```
 
 # Procesado de variables cualitativas
 
@@ -479,14 +505,13 @@ Para realizar un análisis de regresión, todas las variables deben ser numéric
 
 ```{r}
 # Categorizamos la variable en los 4 niveles.
-data_train$cat_17 <- 0
-data_train$cat_17 [data_train$cont_rating == '17+'] <-1
-data_train$cat_12 <- 0
-data_train$cat_12 [data_train$cont_rating == '12+'] <-1
-data_train$cat_9 <- 0
-data_train$cat_9 [data_train$cont_rating == '9+'] <-1
-data_train$cat_4 <- 0
-data_train$cat_4 [data_train$cont_rating == '4+'] <-1
+# Cargamos los paquetes dummies
+data_train <- cbind(data_train, dummy(data_train$cont_rating))
+#Rename
+names(data_train)[names(data_train) == "data_train17+"] <- "rating_17+"
+names(data_train)[names(data_train) == "data_train12+"] <- "rating_12+"
+names(data_train)[names(data_train) == "data_train9+"] <- "rating_9+"
+names(data_train)[names(data_train) == "data_train4+"] <- "rating_4+"
 ```
 
 ## Variable Prime_genre
@@ -504,7 +529,7 @@ names(genero)[names(genero) == "data_train.prime_genre"] <- "genero"
 unique(genero$genero)
 ```
 
-###Análisis de la variable.
+### Análisis de la variable.
 
 Para conocer más la variable y cómo análisis exploratorio de la misma, generamos el número de aplicaciones por género, además de un porcentaje sobre el total de aplicaciones.
 
@@ -601,20 +626,21 @@ Lifestyle_genre:
 genero <- select(genero,X, genero_new)
 data_train <- merge (x= data_train, y=genero, by="X")
 
-data_train$Games_genre <- 0
-data_train$Games_genre [data_train$genero_new == 'Games'] <-1
-
-data_train$Utilities_genre <- 0
-data_train$Utilities_genre [data_train$genero_new == 'Utilities'] <-1
-
-data_train$Entertainment_genre <- 0
-data_train$Entertainment_genre [data_train$genero_new == 'Entertainment'] <-1
-
-data_train$Lifestyle_genre <- 0
-data_train$Lifestyle_genre [data_train$genero_new == 'Lifestyle'] <-1
+data_train <- cbind(data_train, dummy(data_train$genero_new))
+names(data_train)[names(data_train) == "data_trainGames"] <- "Games_genre"
+names(data_train)[names(data_train) == "data_trainLifestyle"] <- "Lifestyle_genre"
+names(data_train)[names(data_train) == "data_trainEntertainment"] <- "Entertainment_genre"
+names(data_train)[names(data_train) == "data_trainUtilities"] <- "Utilities_genre"
 ```
 
+```{r}
+data_train_new <- data_train %>% select(
+  4,6,7,8,12,14,16,17,18,19,20,21,22,24,25,26,27)
+```
 
+```{r}
+head(data_train_new)
+```
 
 # Selección de variables
 
@@ -625,7 +651,4 @@ data_train$Lifestyle_genre [data_train$genero_new == 'Lifestyle'] <-1
 ## Interpretación de resultados
 
 ## Diagnósis del modelo
-
-
-
 
