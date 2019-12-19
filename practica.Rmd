@@ -482,13 +482,13 @@ Para realizar un análisis de regresión, todas las variables deben ser numéric
 ```{r}
 # Categorizamos la variable en los 4 niveles.
 data_train$cat_17 <- 0
-data_train$cat_17 [data_train$cat_rating == '17+'] <-1
+data_train$cat_17 [data_train$cont_rating == '17+'] <-1
 data_train$cat_12 <- 0
-data_train$cat_12 [data_train$cat_rating == '12+'] <-1
+data_train$cat_12 [data_train$cont_rating == '12+'] <-1
 data_train$cat_9 <- 0
-data_train$cat_9 [data_train$cat_rating == '9+'] <-1
+data_train$cat_9 [data_train$cont_rating == '9+'] <-1
 data_train$cat_4 <- 0
-data_train$cat_4 [data_train$cat_rating == '4+'] <-1
+data_train$cat_4 [data_train$cont_rating == '4+'] <-1
 ```
 
 ## Variable Prime_genre
