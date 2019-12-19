@@ -68,7 +68,7 @@ En esta practica se pretende analizar sus variables con el fin de plantear objet
 data_apps = read.csv('AppleStore.csv')
 ```
 
-Cargamos los datos y la estructura de los datos
+Cargamos el conjunto datos y mostramos una vista preliminar de los tipos de variables que contiene:
 
 ```{r}
 str(data_apps)
@@ -76,7 +76,7 @@ str(data_apps)
 
 Observamos que el data set consta de 7197 observaciones, 17 variables, de las cuales aproximadamente 8 son números enteros, 5 categóricas y 4 representan valores numéricos.
 
-Con la función head visualizamos el nombre de las observaciones y los valores que contiene cada una
+Con la función head visualizamos el nombre de las observaciones y los valores que contiene cada una:
 
 ```{r}
 head(data_apps)
@@ -110,18 +110,19 @@ head(data_apps)
 ggcorr(data_apps, low='steelblue', mid='white', high ='lightcoral')
 ```
 
-Al observar la matriz de correlación apreciamos que la mayoría de las variable no se relaciona a un nivel significativo, sin resaltaremos las que guardan cierta correlación positiva:
-- size_bytes vs sup_devices num: Puede deberse que al ser una aplicación que pueda ser ejecutada para varias versiones su peso ascienda considerablemente
+Al observar la matriz de correlación apreciamos que la mayoría de las variables no se relacionan linealmente a un nivel significativo, sin resaltaremos las que guardan cierta correlación positiva:
 
-- size_bytes vs ipadSc_urls.num: El peso se aplicación puede influir en el numero screen shot que presenta la aplicación
+* size_bytes vs sup_devices num: Puede deberse que al ser una aplicación que pueda ser ejecutada para varias versiones su peso ascienda considerablemente.
 
-- lang.num vs user_rating_ver: La cantidad de lenguaje soportado influye sobre los rating de las ultimas versiones
+* size_bytes vs ipadSc_urls.num: El peso se aplicación puede influir en el numero screen shot que presenta la aplicación.
 
-- lang.num vs user_rating: La cantidad de lenguaje soportado influye sobre los rating
+* lang.num vs user_rating_ver: La cantidad de lenguaje soportado influye sobre los rating de las ultimas versiones.
 
-- lang.num vs rating_count_tot: El lenguaje se relaciona con el numero de calificaciones total que recibe
+* lang.num vs user_rating: La cantidad de lenguaje soportado influye sobre los rating.
 
-- ipadSc_urls.num vs user_rating_ver: El numero de screen shot con el user_rating_ver
+* lang.num vs rating_count_tot: El lenguaje se relaciona con el numero de calificaciones total que recibe.
+
+* ipadSc_urls.num vs user_rating_ver: El número de capturas de pantalla o *screenshots* con el user_rating_ver.
 
 # Detección, tratamiento e imputación de datos faltantes
 
@@ -166,31 +167,31 @@ data_apps$user_rating_ver[c(pos_missing)] <- NA
 
 Una vez que hemos generado los valores faltantes, vamos a representar estos valores en un histograma y cómo se distribuyen en el conjunto.
 
-```{r repr_valores_missing}
-aggr_plot <- aggr(data_apps, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE,
+```{r repr_valores_missing, echo=FALSE, message=TRUE, warning=FALSE}
+aggr_plot <- aggr(data_apps, col=c('steelblue','coral'), numbers=TRUE, sortVars=TRUE,
                   labels=names(data_apps), cex.axis=.7, gap=3,
                   ylab=c("Histograma de datos faltantes","Patrón"))
 ```
 
-(Comentar los gráficos)
+En el histograma (gráfico de la izquierda), observamos que la proporción de valores faltantes coincide con los valores que hemos generado. En el gráfico de la derecha podemos ver cuál es la propoción de que falten valores siguiendo una combinación de variables. Por ejemplo, en la primera fila está el porcentaje de filas que contienen faltantes en las variables `user_rating` y `user_rating_ver` a la vez.
+
+A continuación, vemos un gráfico que representa cómo están distribuídos los valores faltantes de estas dos variables y cuál es el rango de sus valores, incluyendo su media y su mediana:
 
 ```{r repr_variables_missing}
 data_apps %>% select(user_rating, user_rating_ver) %>% marginplot()
 ```
 
-(Comentar los gráficos)
-
 ## Imputación de valores faltantes
 
-Primero, eliminamos las columnas que no nos interesan:
+Antes de realizar la imputación, vamos a proceder a eliminar columnas que no ofrecen ninguna información para la imputación de estas variables y la razón por la que se elimina:
+
+* `track_name`: El nombre de la aplicación en el *App Store*.
+* `currency`: divisa, decidimos eliminar esta variable por tener un porcentaje tan alto de valores faltantes.
+* `ver`: Versión de la aplicación. Como no tiene porqué seguir un estándar, carece de significado.
+
 ```{r eliminar_columnas}
 data_apps_clean <- data_apps %>%
-  select(-c(track_name, currency, ver, vpp_lic))
-```
-
-### Prueba de imputación por K-NN
-```{r repr_imputacion_knn}
-data_apps_clean %>% select(user_rating, user_rating_ver) %>% VIM::kNN() %>% marginplot(., delimiter="_imp")
+  select(-c(track_name, currency, ver))
 ```
 
 ### Imputación usando el paquete MICE
@@ -208,6 +209,13 @@ data_apps_imp <- complete(apps_imp)
 ```
 
 # Generar conjuntos de entrenamiento, test y validación
+
+Separamos el número de observaciones en dos bloques: el de Training (un 75\%) y el de Test (un 25\%). Además, 
+para realizar una simulación de lo que ocurrirá al probar los datos de Test, dividimos el conjunto de Training para obtener también un conjunto de validación, por lo que la proporción queda de la siguiente manera respecto del número total de observaciones:
+
+* Training: 50\%
+* Validación: 25\%
+* Test: 25\%
 
 ```{r separar_training_test}
 
@@ -232,11 +240,11 @@ Al observar las variables con las que cuenta el dataset, nos resulta interesante
 
 Dicho esto, el objetivo general que nos gustaría alcanzar analizando este conjunto de datos es obtener un modelo que prediga cuántas valoraciones va a obtener una aplicación en función de una serie de variables. Además, buscamos encontrar qué variables son relevantes a la hora de obtener más o menos reseñas.
 
-Además de este objetivo principal, surgen unos cuantos objetivos secundarios:
+Además de este objetivo principal, surgen unos cuantos objetivos secundarios como relaciones entre variables que pueden ser interesantes. Por ejemplo: 
 
-*
-*
-*
+* ¿Está relacionado el número de idiomas a los que la aplicación está traducida con su valoración y el número de valoraciones?
+* ¿Influye el número de capturas de pantalla que se adjuntan en la pantalla de descarga?
+* ¿A qué género pertenecen las aplicaciones más y menos valoradas?
 
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 
@@ -262,12 +270,6 @@ hist(data_train$user_rating)
 ```
 
 ```{r initial_plots, warning=FALSE}
-corrplot(cor(data_train %>%
-               select(price:user_rating_ver, ipadSc_urls.num,
-                      sup_devices.num, lang.num, size_bytes),
-               use = "complete.obs"),
-               method = "circle",type = "upper")
-
 stats_apps_cor <-
   data_train %>%
   select(price:user_rating_ver, ipadSc_urls.num,
@@ -642,7 +644,31 @@ data_train_new <- data_train %>% select(
 head(data_train_new)
 ```
 
+---
+
+Nota: por falta de tiempo, no hemos podido completar los siguientes apartados.
+
 # Selección de variables
+
+Para seleccionar qué variables son las más significativas para nuestro modelo, aplicamos uno de los métodos para obtenerlas automáticamente evaluándolas con uno de los parámetros propuestos. En este caso, usamos "R cuadrado ajustado".
+
+```{r}
+# Eliminamos la variable original del género y nos quedamos con la transformada
+data_train_clean <- data_train %>%
+  select(-c(prime_genre))
+
+# Calculamos los "Best subsets"
+regfit_full <- leaps::regsubsets(rating_count_tot~., data_train_clean)
+
+reg_sum <- summary(regfit_full)
+
+# Estos son los valores de R cuadrado ajustado
+reg_sum$adjr2
+
+plot(regfit_full, scale="adjr2")
+
+coef(regfit_full, 6)
+```
 
 # Ajuste, interpretación y diagnosis del modelo de regresión lineal múltiple
 
