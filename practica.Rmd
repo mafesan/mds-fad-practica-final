@@ -39,6 +39,7 @@ library(tidyverse)
 library(PerformanceAnalytics)
 library(plotly)
 
+
 # Usados por david
 library(R.methodsS3)
 library(R.oo)
@@ -48,19 +49,84 @@ library(ggthemes)
 
 # Seed
 set.seed(3)
+
+#Graficos
+library(RColorBrewer)
+library(gridExtra)
 ```
 
-# Introducción 
+# Introducción
 
 El conjunto de datos que se analiza en esta práctica trata sobre información acerca de aplicaciones móviles disponibles en el *App Store*, la tienda de aplicaciones de *Apple*.
 
+En esta practica se pretende analizar sus variables con el fin de plantear objetivos que aporten valor, utilizando las tecnicas principales para el análisis y modelado de datos
+
+#Analisís explotario inicial - EDA
+
 ```{r read_file}
-data_apps = read.csv("AppleStore.csv")
+data_apps = read.csv('AppleStore.csv')
 ```
+
+Cargamos los datos y la estructura de los datos
+
+```{r}
+str(data_apps)
+```
+
+Observamos que el data set consta de 7197 observaciones, 17 variables, de las cuales aproximadamente 8 son numeros enteros, 5 categoricas y 4 representan valores numéricos.
+
+Con la función head visualizamos el nombre de las observaciones y los valores que contiene cada una
+
+```{r}
+head(data_apps)
+```
+
+## Tipo de Variables
+
+| VARIABLE                                                         	| DESCRIPCIÓN                                                               	| TIPO DE VARIABLE      	|
+|------------------------------------------------------------------	|---------------------------------------------------------------------------	|-----------------------	|
+| X: Index                                                         	| Indice                                                                    	| none                  	|
+| id: Apple ID                                                     	| Numero de identificación de la app                                        	| CATEGÓRICA            	|
+| track_name: App Name                                             	| Nombre de la aplicación                                                   	| CATEGÓRICA            	|
+| size_bytes: Size (in Bytes)                                      	| Peso de la aplicación en bytes                                            	| CUANTITATIVA CONTINUA 	|
+| currency: Currency Type<br>                                      	| Tipo de Moneda                                                            	| CATEGÓRICA            	|
+| pric: Price amount                                               	| Precio                                                                    	| CUANTITATIVA CONTINUA 	|
+| rating_count_tot: User Rating counts (for all version)           	| Cantidad de Reseñas                                                       	| CUANTITATIVA CONTINUA 	|
+| rating_count_ver: User Rating counts (for current version)       	| Cantidad de Reseñas para la version actual                                	| CUANTITATIVA CONTINUA 	|
+| user_rating: Average User Rating value (for all version)         	| Valor promedio de las Reseñas Totales                                     	| CUANTITATIVA DISCRETA 	|
+| user_rating_ver: Average User Rating value (for current version) 	| Valor promedio de las Reseñas para la versión actual                      	| CUANTITATIVA DISCRETA 	|
+| ver : Latest version code                                        	| Versión actual                                                            	| CATEGÓRICA            	|
+| cont_rating: Content Rating                                      	| Calificación del contenido (Edad)                                         	| CATEGÓRICA            	|
+| prime_genre: Primary Genre                                       	| Genero de la aplicación                                                   	| CATEGÓRICA            	|
+| sup_devices.num: Number of supporting devices                    	| Número de dispositivos soportados                                         	| CUANTITATIVA CONTINUA 	|
+| ipadSc_urls.num": Number of screenshots showed for display       	| Número de capturas de pantalla mostrados antes del acceso a la aplicación 	| CUANTITATIVA CONTINUA 	|
+| lang.num: Number of supported languages                          	| Lenguajes Soportados                                                      	| CUANTITATIVA CONTINUA 	|
+| vpp_lic: Vpp Device Based Licensing Enabled* VPP                 	| Licencia - Compras por Volumen de Apple                                   	| CATEGORICA DICÓTOMAS  	|
+
+
+## CORRELACIÓN
+```{r, warning= FALSE, fig.align='center', fig.show='hold', echo=FALSE, message=FALSE}
+ggcorr(data_apps, low='steelblue', mid='white', high ='lightcoral')
+```
+
+Al observar la matriz de correlación apreciamos que la mayoria de las variable no se relaciona a un nivel significativo, sin resaltaremos las que guardan cierta corelación positiva:
+- size_bytes vs sup_devices num: Puede deberse que al ser una aplicación que pueda ser ejecutada para varias versiones su peso ascienda considerablemente
+
+- size_bytes vs ipadSc_urls.num: El peso se aplicación puede influir en el numero screen shot que presenta la aplicación
+
+- lang.num vs user_rating_ver: La cantidad de lenguaje soportado influye sobre los rating de las ultimas versiones
+
+- lang.num vs user_rating: La cantidad de lenguaje soportado influye sobre los rating
+
+- lang.num vs rating_count_tot: El lenguaje se relaciona con el numero de calificaciones total que recibe
+
+- ipadSc_urls.num vs user_rating_ver: El numero de screen shot con el user_rating_ver
+
+
 
 # Valores faltantes
 
-Al realizar un análisis preliminar de los datos, observamos que no hay valores faltantes. 
+Al realizar un análisis preliminar de los datos, observamos que no hay valores faltantes.
 ```{r comprobar_na}
 sum(is.na(data_apps))
 ```
@@ -103,7 +169,7 @@ Una vez que hemos generado los valores faltantes, vamos a representar estos valo
 
 ```{r repr_valores_missing}
 aggr_plot <- aggr(data_apps, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE,
-                  labels=names(data_apps), cex.axis=.7, gap=3, 
+                  labels=names(data_apps), cex.axis=.7, gap=3,
                   ylab=c("Histograma de datos faltantes","Patrón"))
 ```
 
@@ -128,8 +194,11 @@ data_apps_clean <- data_apps %>%
 data_apps_clean %>% select(user_rating, user_rating_ver) %>% VIM::kNN() %>% marginplot(., delimiter="_imp")
 ```
 
-
 ### Imputación usando el paquete MICE
+
+Para realizar la imputación de valores faltantes de las variables `user_rating` y `user_rating_ver` hemos usado el paquete MICE, que incluye múltiples métodos para imputar estos valores. Nosotros hemos aplicado el método `cart`. Este método se basa en árboles de clasificación y regresión. Los modelos CART (*Classification and regression trees*) buscan predictores y puntos en estos predictores donde dividir la muestra. Estos puntos dividen la muestra en más sub-muestras homogénas, y este proceso se repite en las sub-muestras hasta que una serie de divisiones define un árbol binario. Si la variable objetivo es discreta, será un árbol de clasificación mientras que si es contínua será un árbol de regresión.
+
+El parámetro `m` indica el número de imputaciones que se van a realizar para poder elegir cuál es la que finalmente se aplica. En este caso, `m` vale 1 ya que sólo queremos que la imputación se realice una vez.
 
 ```{r imputacion_datos}
 apps_imp = mice(data_apps_clean, method = "cart", m = 1)
@@ -139,18 +208,18 @@ apps_imp = mice(data_apps_clean, method = "cart", m = 1)
 data_apps_imp <- complete(apps_imp)
 ```
 
-# Generear conjuntos de entrenamiento, test y validación 
+# Generear conjuntos de entrenamiento, test y validación
 
 ```{r separar_training_test}
 
 # Separamos los datos en los siguientes porcentajes: Train (50), Test (25), Validación (25)
 
 # Obtenemos la muestra del 50% y filtramos por esos elementos
-train = sample(1:nrow(data_apps_clean), .5 * nrow(data_apps_clean), replace = FALSE)
-data_train = data_apps_clean[train,]
+train = sample(1:nrow(data_apps_imp), .5 * nrow(data_apps_imp), replace = FALSE)
+data_train = data_apps_imp[train,]
 
 # Cogemos el 50% restante y lo dividimos en dos partes iguales para Test y para Validación
-test_validacion = data_apps_clean[-train,]
+test_validacion = data_apps_imp[-train,]
 test = sample(1:nrow(test_validacion), .5 * nrow(test_validacion), replace = FALSE)
 
 # Filtramos para obtener los otros dos conjuntos
@@ -166,18 +235,44 @@ hist(data_train$user_rating)
 ```
 
 ```{r initial_plots, warning=FALSE}
-corrplot(cor(data_train %>% 
+corrplot(cor(data_train %>%
                select(price:user_rating_ver, ipadSc_urls.num,
-                      sup_devices.num, lang.num, size_bytes), 
-               use = "complete.obs"), 
+                      sup_devices.num, lang.num, size_bytes),
+               use = "complete.obs"),
                method = "circle",type = "upper")
 
-stats_apps_cor <- 
-  data_train %>% 
+stats_apps_cor <-
+  data_train %>%
   select(price:user_rating_ver, ipadSc_urls.num,
          sup_devices.num, lang.num, size_bytes)
 ggpairs(stats_apps_cor)
 ```
+
+
+# Definición de Objetivos
+
+
+Al observar las variables con las que cuenta el data set, nos resulta interesante la variable *rating_count_tot* la cual contabiliza el numero de calificaciones y/o reseñas que ha recibido la aplicación, por lo que podemos deducir que el numero de calificaciones corresponde al numero de usuarios activos.
+
+
+
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
+
+
+top_10 <- data_apps %>% top_n(10,rating_count_tot)
+
+orden = top_10$rating_count_tot %>% order(decreasing = T)
+orden
+top_10$track_name = factor(top_10$track_name, levels = top_10$track_name[orden])
+
+ggplot(top_10, aes(x=top_10$track_name , y=top_10$rating_count_tot))+
+  geom_bar(stat = 'identity', color = 'steelblue', fill='steelblue')+
+  labs(x = "Nombre de la APP", y = "Num Total de Calificaciones", title = "APP VS")+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size =10), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(face = "bold", size = 12, angle = 45, hjust = 1), axis.text.y = element_text(face = "bold", size = 12))
+
+```
+
+EL top 10 de variables con el mayor numero de calificaciones corroboramos que el numero de usuarios que califican la aplicación se corresponde a las variables con mas "exito" en la actualidad
 
 
 # Transformación de variables cuantitativas
@@ -187,55 +282,58 @@ Procederemos a analizar las variables cuantitativas del data set, de esta manera
 
 ## Variable rating_count_tot
 
-El *rating_count_tot* que representa el total de calificaciones o reseñas otorgadas a la aplicación de distribuye de la siguiente manera:
+El *rating_count_tot* que representa el total de calificaciones o reseñas otorgadas a la aplicación de distribuye de la siguiente manera.
 
 
-** falta escribir mas**
-
-
-```{r}
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data=data_train, aes(x=rating_count_tot))+
-  geom_histogram(bins=100, color='steelblue', fill='steelblue')
+  geom_histogram(bins=100, color='steelblue', fill='steelblue')+
+  labs(x = "Numero de Calificaciones total", y ="Frecuencia" , title = "HISTOGRAMA NÚMERO DE CALIFICACIONES TOTALES")+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
 
 Para poder apreciar su distribución aplicaremos un logaritmo que nos permita apreciar mayormente su distribución.
 
-```{r}
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data=data_train, aes(x=log10(rating_count_tot)))+
-  geom_histogram(bins=10, color='steelblue', fill='steelblue')
+  geom_histogram(bins=10, color='steelblue', fill='steelblue')+
+  labs(x = "Numero de Calificaciones total", y ="Frecuencia" , title = "HISTOGRAMA NÚMERO DE CALIFICACIONES TOTALES", subtitle = "Log")+theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
+
 
 **Notamos que se nos eliminan 929 datos, que pertenecen a los valores 0 de la variable**
 
 Aplicamos log10 +1 para apreciar los valores correspondiente a 0 que se nos han eleminado con el log anterior.
 
 
-```{r}
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data=data_train, aes(x=log10(1+(rating_count_tot))))+
-  geom_histogram(bins=10, color='steelblue', fill='steelblue')
+  geom_histogram(bins=10, color='steelblue', fill='steelblue')+
+  labs(x = "Numero de Calificaciones total", y ="Frecuencia" , title = "HISTOGRAMA NÚMERO DE CALIFICACIONES TOTALES", subtitle = "Log +1")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
-** Al analizar el box plot observamos que la mayora de lo
 
+Analizamos la variable a traves de un box plot para confirmar su distribución
 
-```{r}
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data=data_train, aes(x= " ", y= log10(1+(rating_count_tot))))+
-  geom_boxplot(color='black', fill='steelblue')
+  geom_boxplot(color='black', fill='steelblue')+
+  labs(x = "" , y ="Numero de calificaciones totales" , title = "BOX PLOT NÚMERO DE CALIFICACIONES TOTALES", subtitle = "Log +1")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
-
 
 
 Analizamos los cuantiles de los datos.
 
-Podemos notar que el comportamiento deñ *rating_count_tot* varia drasticamente, el salto entre el cuantil 95% al 100% varia desde 48107 a 2974676. 
-
-Solo el 0.13% de los datos representan valores mayores de mas del millón.
-
-
 ```{r}
 quantile(data_train$rating_count_tot, probs = seq(0,1,0.05))
 ```
+
+
+Podemos notar que el comportamiento de *rating_count_tot* varia drasticamente, el salto entre el cuantil 95% al 100% varia desde 48107 a 2974676.
+
+Solo el 0.13% de los datos representan valores mayores de mas del millón.
+
 
 ```{r}
 top_10 <- data_train %>% top_n(10, rating_count_tot)
@@ -246,77 +344,73 @@ top_10 <- data_train %>% top_n(10, rating_count_tot)
 
 ## Variable Size_bytes
 
-El principal problema de esta variable es la dificultad de comprensión de los datos, por lo que a través de la transformación dicha variable a MB creamos una nueva variable que sea mas comprensible para el ser humano.
-```{r}
-Mb <- data.frame(data_train$X, data_train$size_bytes)
+La principal problemática que nos genera esta variable es la comprensión de los datos. Para hacerlos comprensibles para todas las personas, a través de la función “Hsize” se transforma  la medida de bytes a  Mb para que sea más legible.
 
+```{r include=FALSE}
+Mb <- data.frame(data_train$X, data_train$size_bytes)
 names(Mb)[names(Mb) == "data_train.X"] <- "X"
 names(Mb)[names(Mb) == "data_train.size_bytes"] <- "size_bytes"
 
 # Transformamos la variable de bytes a Mb
 
 size <- hsize(Mb$size_bytes, standard="SI")
-Mb$size_MB <- size
+Mb$size_MB <- as.numeric(str_replace(size, " MB", ""))
 
 Mb <- select(Mb, X, size_MB)
 head(Mb)
-# Unimos la nueva columna al Dataframe oroginal
-data_train <- merge (x= data_train, y=Mb, by="X")
+# Unimos la nueva columna al Dataframe original
+data_train <- merge (x=data_train, y=Mb, by="X")
 ```
 
-```{r}
-ggplot(data_train, aes(x=size_MB)) +
-  geom_histogram(bins=10, fill='steelblue')
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
+ggplot(data_train, aes(x=size_bytes)) +
+  geom_histogram(bins=10, fill='steelblue')+
+  labs(x = "Peso de la Aplicación" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN", subtitle = "Bytes")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
+Observamos que la mayoria se encuentra ubicada hacia el cero, por ende aplicaremos un logaritmo y asi poder apreciar su distribución
 
-```{r}
-ggplot(data_train, aes(x=log10(size_MB))) +
-  geom_histogram(bins=10, fill='steelblue')
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
+ggplot(data_train, aes(x=log10(size_bytes))) +
+  geom_histogram(bins=10, fill='steelblue')+
+  labs(x = "Peso de la Aplicación" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN", subtitle = "Log10")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
-
 
 
 ## Variable sup_devices.num
 
-Numero de dispositivos soportados
-
-```{r}
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data_train, aes(x=sup_devices.num))+
-  geom_histogram(bins=10, fill='steelblue')
+  geom_histogram(bins=10, fill='steelblue')+
+  labs(x = "dispositivos Soportados" , y ="Frecuencia" , title = "HISTOGRAMA DISPOSITIVOS SOPORTADOS")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
+Al aplicar potencia cuadrada a esta variable observamos un poco mejor aquellos valores cercanos al cero, sin embargo aún asi al prevalecer los valores entre el 35-40 es inevitable esta distribución
 
-
-
-```{r}
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data_train, aes(x=(sup_devices.num)**2))+
-  geom_histogram(bins=30, fill='steelblue')
+  geom_histogram(bins=30, fill='steelblue')+
+  labs(x = "Peso de la Aplicación" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN", subtitle = "x^2")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
 
 
-Transformamos la variable elevando al cuadrado para visualizar mejor sus valores hacia la izquierda, de igual manera notamos 
-
-```{r}
-ggplot(data_train, aes(x= '', y=(sup_devices.num)**2))+
-  geom_boxplot(fill='steelblue')
-```
-
+Transformamos la variable elevando al cuadrado para visualizar mejor sus valores hacia la izquierda, de igual manera notamos
 
 ## Variable lang.num
 
-
-```{r}
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data_train, aes(x=(lang.num))) +
-  geom_histogram(bins=10, fill='steelblue')
+  geom_histogram(bins=10, fill='steelblue')+
+  labs(x = "Nº de Idiomas" , y ="Frecuencia" , title = "HISTOGRAMA Nº IDIOMAS")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
 
 
-```{r}
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data_train, aes(x=log10(1+(lang.num)))) +
-  geom_histogram(bins=10, fill='steelblue')
+  geom_histogram(bins=10, fill='steelblue')+
+  labs(x = "Nº de Idiomas" , y ="Frecuencia" , title = "HISTOGRAMA Nº IDIOMAS", subtitle = "log10+1")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
 
@@ -325,17 +419,19 @@ ggplot(data_train, aes(x=log10(1+(lang.num)))) +
 
 ## Rating de edad
 
-La clasificación que sigue apple en este caso, es distinta a la que sigue Google o los sistemas internacionales de clasificación de applicaciones y videojuegos, cómo en el caso europeo "PEGI" o a nivel americano "ESRB", por lo que transformaremos esta variable para que sea más comprensible y para preparar dicha variable para los pasos posteriores.
+Existe una clasificación de contenido para las aplicaciones, los estándares más importantes son: A nivel europeo “PEGI” y a nivel americano “ESRB”. Las principales distribuidoras de aplicaciones para móviles, cómo son Apple store o Google play, siguen una clasificación diferente.
 
-```{r}
-#Nos quedmaos con la variable objetivo y un identificador para mergeralo con la origen tras procesar la variable
+```{r include=FALSE}
+# Nos quedamos con la variable objetivo y un identificador para mergearlo con la origen tras procesar la variable
 Rating <- data.frame(data_train$X, data_train$cont_rating)
 
 names(Rating)[names(Rating) == "data_train.X"] <- "X"
 names(Rating)[names(Rating) == "data_train.cont_rating"] <- "cont_rating"
 ```
 
-Encontramos 4 niveles de rating en Apple store:
+### Análisis de la variable.
+
+En el caso que nos ocupa es el de Apple store, que establece 4 clasificaciones:
 
 ```{r}
 unique(Rating$cont_rating)
@@ -353,44 +449,68 @@ unique(Rating$cont_rating)
 ### Último nivel: 17 +
 - Puede contener lenguaje ofensivo frecuente e intenso, caricaturas excesivas, fantasía o violencia realista, madurez frecuente e intensa, horror, temas sugestivos, contenido sexual, desnudez, alcohol y drogas, o una combinación de cualquiera de estos factores que son inadecuados para personas menores de 17 años de edad. Esto incluye aplicaciones con acceso web sin restricciones. Ninguna persona menor de 16 años puede comprar una aplicación con una calificación de 17+.
 
-```{r}
-# Análisis de la variable
-table(Rating$cont_rating)
-plot(Rating$cont_rating)
-```
-Transformamos la variable cualitativa en variable cuantitativa categorizando y asignando un numero del 0 al 4 para cada categoría del Rating de edad. Lo hacemos de esta manera por la naturaleza de la variable origen, ya que ordena del 4+ al 17+ clasificación de edad y la tranformación lo hace de igual manera estableciendo del 1 al 4 dependiendo de la edad de clasificación.
+Para conocer mejor nuestra variable, utilizaremos la función ‘Table’ y una gráfica ‘plot’ para ver la distribución de la misma en nuestros datos:
 
-* 4+ = Categroría Nº1
-* 9+ = Categoría Nº2
-* 12+ = Categoría Nº3
-* 17+ = Categoría Nº4
+
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
+ggplot(Rating, aes(x=cont_rating)) + geom_bar(fill='lightsteelblue2')+
+  labs(x = "Rating de la App" , y ="Frecuencia" , title = "Rating por Edad")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, hjust = 1), axis.text.y = element_text(size = 10))
+```
+
+Observamos que la mayoría de las aplicaciones en Apple Store tienen una clasificación de 4+, es decir, son aptas para todos los públicos, mientras que las que mayor clasificación tienen 17+, son las minoritarias.
+
+### Procesado de la variable
+
+Para realizar un análisis de regresión, todas las variables deben ser numéricas, por lo que dicha variable requiere una recodificación. La recodificación utilizada en este caso se basa en los 4 niveles de rating, por cada nivel crearemos una nueva variable con dos niveles cada una:
+
+####Categoría_4+.
+1, cuando la aplicación está categorizada por 4+.
+0, cuando la aplicación no está categorizada como 4+.
+
+####Categoría_9+.
+1, cuando la aplicación está categorizada por 9+.
+0, cuando la aplicación no está categorizada como 9+.
+
+####Categoría_12+.
+1, cuando la aplicación está categorizada por 12+.
+0, cuando la aplicación no está categorizada como 12+.
+
+####Categoría_17+.
+1, cuando la aplicación está categorizada por 17+.
+0, cuando la aplicación no está categorizada como 17+.
 
 ```{r}
 # Categorizamos la variable en los 4 niveles.
-
-Rating$cat_rating <- 0
-Rating$cat_rating [Rating$cont_rating =="4+"]<- 1
-Rating$cat_rating [Rating$cont_rating =="9+"]<- 2
-Rating$cat_rating [Rating$cont_rating =="12+"]<- 3
-Rating$cat_rating [Rating$cont_rating =="17+"]<- 4
-Rating %>% distinct(cat_rating, cont_rating)
-```
-
-```{r}
-Rating <- select(Rating,X, cat_rating)
-# Unimos la nueva columna al Dataframe original
-data_train <- merge (x= data_train, y=Rating, by="X")
+data_train$cat_17 <- 0
+data_train$cat_17 [data_train$cat_rating == '17+'] <-1
+data_train$cat_12 <- 0
+data_train$cat_12 [data_train$cat_rating == '12+'] <-1
+data_train$cat_9 <- 0
+data_train$cat_9 [data_train$cat_rating == '9+'] <-1
+data_train$cat_4 <- 0
+data_train$cat_4 [data_train$cat_rating == '4+'] <-1
 ```
 
 ## Variable Prime_genre
 
-```{r}
+En la plataforma de Apple store, se dividen las aplicaciones en 23 clasificaciones dependiendo del género de las mismas.
+
+```{r include=FALSE}
 genero <- data.frame(data_train$X, data_train$prime_genre)
 
 names(genero)[names(genero) == "data_train.X"] <- "X"
 names(genero)[names(genero) == "data_train.prime_genre"] <- "genero"
 ```
-Dicha variable se divide en varios tipos de applicaciones dependiendo del género de las mismas.Entre ellas encontramos distintas categorías:
+
+```{r}
+unique(genero$genero)
+```
+
+###Análisis de la variable.
+
+Para conocer más la variable y cómo análisis exploratorio de la misma, generamos el número de aplicaciones por género, además de un porcentaje sobre el total de aplicaciones.
+
+
 ```{r}
 genero_tab<- data.frame(table(genero$genero))
 genero_tab = mutate(genero_tab, percent = Freq/ sum(Freq))
@@ -398,14 +518,20 @@ names(genero_tab)[names(genero_tab) == "Var1"] <- "genero"
 genero_tab
 ```
 
-```{r}
-pie(genero_tab$Freq, labels = genero_tab$genero)
+
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
+ggplot(genero_tab, aes(x="", y=Freq, fill=genero)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0)+
+  labs(title = "Genero de la App")+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size =12))
 ```
-Recategorizamos el género de las aplicaciones en 4 categorías principales, debido a la poca granularidad de la variable:
+
+Cómo podemos observar en la gráfica siguiente, el género que mayor tasa de aplicaciones es el género “Games” con un 50% de las aplicaciones. El resto de las aplicaciones se dividen entre las 22 categorías de Apple Store. Debido a esta problemática, optaremos por crear cuatro nuevas clasificaciones partiendo de las clasificaciones de la tienda oficial de Apple. Estas nuevas categorías son:
 
 1. Games.
 2. Lifestyle.
-3. Ulitilies.
+3. Utilities.
 4. Entertainment.
 
 ```{r}
@@ -414,7 +540,7 @@ Recategorizamos el género de las aplicaciones en 4 categorías principales, deb
 genero$genero_new <- 0
 genero$genero_new [genero$genero == 'Games'] <-"Games"
 genero$genero_new [genero$genero == 'Business'       |genero$genero == 'Catalogs'
-                 |genero$genero == 'Education'       |genero$genero == 'Finance' 
+                 |genero$genero == 'Education'       |genero$genero == 'Finance'
                  |genero$genero == 'Health & Fitness'|genero$genero == 'Lifestyle'
                  |genero$genero == 'Medical'         |genero$genero == 'Sports'
                  |genero$genero == 'Travel']<- "Lifestyle"
@@ -424,7 +550,7 @@ genero$genero_new [genero$genero == 'Utilities' |genero$genero == 'Weather'
                  |genero$genero == 'Reference' ]<- "Utilities"
 
 genero$genero_new [genero$genero == 'Entertainment'|genero$genero == 'Book'
-                 |genero$genero == 'Food & Drink'  |genero$genero == 'Music' 
+                 |genero$genero == 'Food & Drink'  |genero$genero == 'Music'
                  |genero$genero == 'News'          |genero$genero == 'Photo & Video'
                  |genero$genero == 'Shopping'      |genero$genero =='Social Networking'
                  ]<- "Entertainment"
@@ -440,30 +566,52 @@ names(genero_new)[names(genero_new) == "Var1"] <- "genero"
 genero_new
 ```
 
-```{r}
-pie(genero_new$percent, labels =genero_new$genero)
+Las nuevas categorías presentan una distribución diferente, donde encontramos que el género “Games” sigue siendo el mayoritario en nuestros datos, seguido del género “Entertainment” y “Lifestyles”. El género con menor número de aplicaciones es “Utilities”.
+
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
+ggplot(genero_new, aes(x="", y=Freq, fill=genero)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0)+
+  labs(title = "Genero de la App")+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size =12))
 ```
 
-### Categorización de la variable Count_Rating
+### Procesado de la variable.
 
-Tras crear las 4 categorías anteriores, crearemos una nueva columna en nuestro datasets por cada categoría, con valores del 1 al 0.
+El procesado de esta variable se llevará a cabo creando 4 nuevas columnas dentro de nuestro datasets origen, para cada nuevo género.
+
+Games_genre:
+  1, cuando la aplicación está categorizada como “Juegos”.
+  0, cuando la aplicación no está categorizada como “Juegos”.
+
+Entertainment_genre:
+  1, cuando la aplicación está categorizada como “Entretenimiento”.
+  0, cuando la aplicación no está categorizada como “Entretenimiento”.
+
+Utilities_genre:
+  1, cuando la aplicación está categorizada como “Utilidades”.
+  0, cuando la aplicación no está categorizada como “Utilidades”.
+
+Lifestyle_genre:
+  1, cuando la aplicación está categorizada como “Estilo de vida”.
+  0, cuando la aplicación no está categorizada como “Estilo de vida”.
+
+
 ```{r}
 # Mergeamos con Apple _Store y creamos una columna para cada categoría.
 
 genero <- select(genero,X, genero_new)
 data_train <- merge (x= data_train, y=genero, by="X")
 
-data_train$Game_categ <- 0
-data_train$Game_categ [data_train$genero_new == 'Games'] <-1
+data_train$Games_genre <- 0
+data_train$Games_genre [data_train$genero_new == 'Games'] <-1
 
-data_train$Utilities_categ <- 0
-data_train$Utilities_categ [data_train$genero_new == 'Utilities'] <-1
+data_train$Utilities_genre <- 0
+data_train$Utilities_genre [data_train$genero_new == 'Utilities'] <-1
 
-data_train$Entertainment_categ <- 0
-data_train$Entertainment_categ [data_train$genero_new == 'Entertainment'] <-1
+data_train$Entertainment_genre <- 0
+data_train$Entertainment_genre [data_train$genero_new == 'Entertainment'] <-1
 
-data_train$Lifestyle_categ <- 0
-data_train$Lifestyle_categ [data_train$genero_new == 'Lifestyle'] <-1
+data_train$Lifestyle_genre <- 0
+data_train$Lifestyle_genre [data_train$genero_new == 'Lifestyle'] <-1
 ```
-
-
