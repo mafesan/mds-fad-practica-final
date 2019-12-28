@@ -804,6 +804,15 @@ Usamos el método "Forward" para realizar la selección automática de variables
 # Semilla
 set.seed(1)
 
+# Renombramos variables para evitar errores
+colnames(data_train_clean)[14] <- "rating_12"
+colnames(data_train_clean)[15] <- "rating_17"
+colnames(data_train_clean)[16] <- "rating_4"
+colnames(data_train_clean)[17] <- "rating_9"
+
+colnames(data_train_clean)[21] <- "Lifestyle_genre"
+colnames(data_train_clean)[22] <- "Utilities_genre"
+
 # Forward
 regfit_full_fwd <- leaps::regsubsets(rating_count_tot_new~., data_train_clean, method='forward')
 
@@ -822,10 +831,12 @@ as.data.frame(data_coef_fwd)
 ## Definición del modelo
 
 ```{r warning=FALSE}
+
 data_train_modelo_fwd <- data_train_clean %>%
   select(rating_count_tot_new, user_rating, user_rating_ver, ipadSc_urls.num,
-         size_bytes_new, lang.num_new, `rating_12`, `rating_9`, Lifestyle_genre, Utilities_genre)
+         size_bytes_new, lang.num_new, rating_12, rating_9, Lifestyle_genre, Utilities_genre)
 ```
+
 
 ```{r}
 # Semilla
