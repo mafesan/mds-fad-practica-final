@@ -203,11 +203,8 @@ data_apps_all %>% group_by(lang.num) %>%
 ```
 
 Cuando observamos esta gráfico observamos que el comportamiento es un tanto peculiar, la mayoría de las aplicaciones con mayor numero de calificaciones se mantienen entre 1-10 idiomas, mientras que las que se encuentran traducidas a mas de 50 idiomas no. Lo que nos lleva a pensar que esta variable no esta directamente relacionada con nuestra variable de interés, sin embargo, lo que si esta directamente relacionado es que ese idioma aunque fuese 1-2 son los idiomas que mas demandan tienen en el mercado: Ingles, chino, etc… 
-  select(price:user_rating_ver, ipadSc_urls.num,
 
-         sup_devices.num, lang.num, size_bytes)
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=8, fig.height=3, echo=FALSE, message=FALSE}
-ggpairs(stats_apps_cor)
 data_apps_all %>% group_by(ipadSc_urls.num) %>% 
   summarise(tot_rating = sum(rating_count_tot)) %>% 
   mutate(ipadSc_urls.num = factor(ipadSc_urls.num, levels = ipadSc_urls.num[order(tot_rating, decreasing = T)])) %>% 
@@ -215,7 +212,7 @@ data_apps_all %>% group_by(ipadSc_urls.num) %>%
   geom_bar(stat = 'identity')+
   labs(x = "Captura de Pantalla de la APP antes de descargarla", y = "Num Total de Calificaciones", title="Número de calificaciones vs Captura de Pantalla de la APP" )+
   theme(plot.title = element_text(hjust = 0.5, face="bold", size =14),axis.text.x = element_text(size = 8, hjust = 1), axis.text.y = element_text(size = 8),legend.position = "none")
-```
+``` 
 
 En este caso, las aplicaciones con mayor numero de capturas consiguen mayor numero de calificaciones (numero de descargas) sin embargo, podemos ver que el numero de las siguientes son 0. Al observar este dato, investigamos la dinámica y el proceso de una app para tener ScreenShot en el AppleStore; si es cierto que para la fecha Julio 2017, Apple aún permitía lanzar aplicaciones sin Capturas de Pantalla y con un máximo de 5. En la actualidad se permiten hasta un máximo de 10 por demanda de los desarrolladores de aplicaciones.
 
