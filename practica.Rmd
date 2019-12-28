@@ -902,7 +902,10 @@ qqline(lm_fit$resid)
 
 # Contraste de normalidad
 sw_test <- shapiro.test(lm_fit$resid)
+sw_test
 ```
+
+Al observar el gráfico Q-Q, sí que parece que los errores se distribuyen de una manera bastante normal, aunque al ejecutar el test de Shapiro-Wilk obtenemos un p-valor muy bajo.
 
 ### Independencia
 
@@ -911,3 +914,5 @@ dwtest(lm_fit) #Test for independence of residuals
 ```
 
 
+El estadístico de Durbin-Watson toma valor 2 cuando los residuos son completamente independientes (entre 1.5 y 2.5 se considera que
+existe independencia). Un valor menor que 2 indica autocorrelación positiva y mayor que dos indica autocorrelación negativa. En nuestro caso, estamos muy cerca del 1.5, por lo que podríamos decir que existe independencia.
