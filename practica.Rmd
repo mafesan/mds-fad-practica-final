@@ -821,13 +821,40 @@ as.data.frame(data_coef_fwd)
 
 ## Definición del modelo
 
-```{r} 
-data_train_modelo_fwd <- subset(data_train_clean, select=c(rating_count_tot_new, user_rating, user_rating_ver, ipadSc_urls.num, size_bytes_new, lang.num_new,
-                                                           rating_12, rating_9, Lifestyle_genre, Utilities_genre))
+```{r warning=FALSE}
+data_train_modelo_fwd <- data_train_clean %>%
+  select(rating_count_tot_new, user_rating, user_rating_ver, ipadSc_urls.num,
+         size_bytes_new, lang.num_new, `rating_12`, `rating_9`, Lifestyle_genre, Utilities_genre)
+```
 
+```{r}
+# Semilla
+set.seed(1)
+
+# Modelo
 lm_fit <- lm(rating_count_tot_new~., data=data_train_modelo_fwd)
 summary(lm_fit)
 ```
+
+Utilizaremos el método Forward que al igual que los otros métodos utilizados forman parte de las estrategias de regresión gradual, la cuál consiste en la agregación y eliminación de los predictores, en búsca de encontrar el subconjunto de variables con mayor rendimiento para el modelo.
+
+En el caso del modelo elegido, los predictores se van agregando según su contribución al modelo y se maximiza el resultado con la mayor significación obtenida. Al generar el modelo Forward, encontramos los siguientes resultados:
+
+Nivel de significación:
+
+- Encontramos 4 variables significativas al 0, lo que significa un alto grado de evidencia estadística, entre ellas se encuentra: La variable “User_rating”, “User_rating_ver”, “Lang.num_new”, “rating_12”.
+- Además, las variable “Rating_9” es significativa en un menor grado que las anteriormente nombradas, aunque con un alto grado de significación.
+
+Por lo que, la seleción de variables automática nos daría cómo resultado estas 6 variables:
+
+1.  User_rating.
+2.  User_rating_ver.
+3.  lang.num_new
+4.  Rating_12
+5.  Rating_9
+
+R ajustado:
+Hemos obtenido la cifra de 0.153, el cuál establece el grado de intensidad de las variables independientes, por lo que la variable dependiente, en nuestro caso “Rating_count_tot_new”, es explicada al 15.3% por las variables selecionadas.
 
 ## Interpretación de resultados
 
