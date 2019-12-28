@@ -1,15 +1,22 @@
 ---
-title: "Práctica Métodos de Análisis de datos"
-author: "Edgli Morales, David Ruiz y Miguel Ángel Fernández - Máster en Data Science, URJC"
-date: "Diciembre de 2019"
+title: <center> Práctica Métodos de Análisis de Datos </center>
+subtitle: <center>APPSTORE - APPLE</center>
+author: <center>Edgli Morales, David Ruiz y Miguel Ángel Fernández - Máster en Data Science, URJC</center>
+date: <center>Diciembre de 2019</center>
 output:
   html_document:
     toc: true
     toc_float: true
     df_print: paged
     code_folding: hide
+    theme: cosmo
   pdf_document: default
 ---
+<style>
+  body {
+    text-align: justify
+  }
+</style>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -35,6 +42,10 @@ library(tidyverse)
 library(R.utils)
 
 library(lmtest)
+library(corrplot)
+library(wesanderson)
+
+library(GGally)
 
 # Semilla inicial
 set.seed(1)
@@ -97,7 +108,13 @@ Hay que añadir que las variables `user_rating` y `user_rating_ver` las hemos co
 
 ## Correlación
 
-Al observar la matriz de correlación apreciamos que la mayoría de las variables no se relacionan linealmente a un nivel significativo, sin resaltaremos las que guardan cierta correlación positiva:
+```{r, warning= FALSE, fig.align='center', fig.show='hold',fig.width=18, fig.height=14, echo=FALSE, message=FALSE}
+data_cor <- select_if(data_apps_all, is.numeric)
+data_cor <- select(data_cor, -c(1))
+corrplot(cor(data_cor), method = "color", addCoef.col="grey", order = "AOE", tl.cex=2, number.cex = 2)
+```
+
+Al observar la matriz de correlación apreciamos que la mayoría de las variables no se relacionan linealmente a un nivel significativo, si resaltaremos las que guardan cierta correlación positiva:
 
 * `size_bytes` vs `sup_devices num`: Cuando una aplicación está soportada por más dispositivos, su tamaño tiende a aumentar.
 
@@ -111,37 +128,45 @@ Al observar la matriz de correlación apreciamos que la mayoría de las variable
 
 * `ipadSc_urls.num` vs `user_rating_ver`: El número de capturas de pantalla o *screenshots* con la puntuación de la última versión de la aplicación.
 
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=8, fig.height=6, echo=FALSE, message=FALSE}
+stats_apps_cor <-
+  data_apps_all%>%
+  select(id, size_bytes,rating_count_tot, rating_count_ver, user_rating, user_rating_ver, sup_devices.num,ipadSc_urls.num, lang.num)
+ggpairs(stats_apps_cor)
+```
 
 # Definición de objetivos
 
-Al observar las variables con las que cuenta el dataset, nos resulta interesante la variable `rating_count_tot` la cual contabiliza el numero de calificaciones y/o reseñas que ha recibido la aplicación. Aunque no tenemos el dato del número de descargas, la variable `rating_count_tot` seguramente tendrá una correlación fuerte con el dato del número de descargas (dato que no facilita Apple de manera pública). Podemos asumir que el número de calificaciones que ha recibido la aplicación corresponde a un número de usuarios que ha descargado la aplicación y que además es un usuario activo de dicha aplicación, por lo que esta variable nos resulta interesante como una aproximación de su número de descargas.
+Al observar las variables con las que cuenta el dataset, nos resulta interesante la variable `rating_count_tot` la cual contabiliza el numero de calificaciones y/o reseñas que ha recibido la aplicación.
 
-Dicho esto, el objetivo general que nos gustaría alcanzar analizando este conjunto de datos es obtener un modelo que prediga cuántas valoraciones va a obtener una aplicación en función de una serie de variables. Además, buscamos encontrar qué variables son relevantes a la hora de obtener más o menos reseñas.
+Aunque no tenemos el dato del número de descargas, la variable `rating_count_tot` seguramente tendrá una correlación fuerte con el dato del número de descargas (dato que no facilita Apple de manera pública); lo que se conoce como variable proxy.
 
+Podemos asumir que el número de calificaciones que ha recibido la aplicación corresponde a un número de usuarios que ha descargado la aplicación y que además es un usuario activo de dicha aplicación, por lo que esta variable nos resulta interesante como una aproximación de su número de descargas.
+
+Dicho esto, el objetivo general que nos gustaría alcanzar analizando este conjunto de datos es **Obtener un modelo que prediga cuántas descargas va a obtener una aplicación en función de una serie de variables**. Además, buscamos encontrar qué variables son relevantes a la hora de obtener más o menos reseñas.
 Además de este objetivo principal, surgen unos cuantos objetivos secundarios como relaciones entre variables que pueden ser interesantes. Por ejemplo:
 
 * ¿Está relacionado el número de idiomas a los que la aplicación está traducida con su valoración y el número de valoraciones?
 * ¿Influye el número de capturas de pantalla que se adjuntan en la pantalla de descarga?
 * ¿A qué género pertenecen las aplicaciones más y menos valoradas?
 
-```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
+Al observar el top 10 de aplicaciones con el mayor número de calificaciones corroboramos que el numero de usuarios que califican la aplicación se corresponde a las variables con mas "éxito" en la actualidad en cuanto a número de usuarios activos.
 
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=8, fig.height=5, echo=FALSE, message=FALSE}
 top_10 <- data_apps_all %>% top_n(10,rating_count_tot)
 
 orden = top_10$rating_count_tot %>% order(decreasing = T)
 orden
 top_10$track_name = factor(top_10$track_name, levels = top_10$track_name[orden])
 
-ggplot(top_10, aes(x=top_10$track_name , y=top_10$rating_count_tot))+
-  geom_bar(stat = 'identity', color = 'steelblue', fill='steelblue')+
-  labs(x = "Nombre de la APP", y = "Num Total de Calificaciones", title = "APP VS")+
-  theme(plot.title = element_text(hjust = 0.5, face="bold", size =10), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(face = "bold", size = 12, angle = 45, hjust = 1), axis.text.y = element_text(face = "bold", size = 12))
 
+ggplot(top_10, aes(x=top_10$track_name , y=top_10$rating_count_tot))+
+  geom_bar(stat = 'identity', fill='steelblue3')+
+  labs(x = "Nombre de la APP", y = "Num Total de Calificaciones", title = "APP VS")+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size =14), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 12, angle = 45, hjust = 1), axis.text.y = element_text(size = 12))
 ```
 
 Al observar el top 10 de aplicaciones con el mayor número de calificaciones corroboramos que el numero de usuarios que califican la aplicación se corresponde a las variables con mas "éxito" en la actualidad en cuanto a número de usuarios activos.
-
----
 
 ```{r}
 data_apps_unrated <- data_apps_all %>%
@@ -151,10 +176,54 @@ data_apps <- data_apps_all %>%
   filter(rating_count_tot > 0)
 ```
 
+Relacionamos nuestra variable de interes con las variables anteriormente mencionadas como objetivos secundarios de la practica, asi determinar mas adelante su influencia en el modelo y si
+
+
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=8, fig.height=3, echo=FALSE, message=FALSE}
+data_apps_all %>% group_by(prime_genre) %>% 
+  summarise(tot_rating = sum(rating_count_tot)) %>% 
+  mutate(prime_genre = factor(prime_genre, levels = prime_genre[order(tot_rating, decreasing = T)])) %>% 
+  ggplot(., aes(x=prime_genre, y=tot_rating, fill=prime_genre))+
+  geom_bar(stat = 'identity')+
+  labs(x = "Genero de la APP", y = "Num Total de Calificaciones", title="Número de calificaciones vs Genero de la aplicación" )+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size =14), axis.text.x = element_text(size = 8, angle = 45, hjust = 1), axis.text.y = element_text(size = 8), legend.position = "none")
+```
+
+Observamos que las aplicaciones con mayor **numero de calificaciones** corresponden a Games y Social Networks.
+
+
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=8, fig.height=3, echo=FALSE, message=FALSE}
+data_apps_all %>% group_by(lang.num) %>% 
+  summarise(tot_rating = sum(rating_count_tot)) %>% 
+  mutate(lang.num = factor(lang.num, levels = lang.num[order(tot_rating, decreasing = T)])) %>% 
+  ggplot(., aes(x=lang.num, y=tot_rating, fill=lang.num))+
+  geom_bar(stat = 'identity')+
+  labs(x = "Idiomas a los que se encuentra traducida la APP", y = "Número de calificaciones" , title="Número de calificaciones vs Idiomas" )+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size =14), axis.text.x = element_text(size = 8, hjust = 1.5, angle= 45), axis.text.y = element_text(size = 8),legend.position = "none")
+```
+
+Cuando observamos esta gráfico observamos que el comportamiento es un tanto peculiar, la mayoría de las aplicaciones con mayor numero de calificaciones se mantienen entre 1-10 idiomas, mientras que las que se encuentran traducidas a mas de 50 idiomas no. Lo que nos lleva a pensar que esta variable no esta directamente relacionada con nuestra variable de interés, sin embargo, lo que si esta directamente relacionado es que ese idioma aunque fuese 1-2 son los idiomas que mas demandan tienen en el mercado: Ingles, chino, etc… 
+  select(price:user_rating_ver, ipadSc_urls.num,
+
+         sup_devices.num, lang.num, size_bytes)
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=8, fig.height=3, echo=FALSE, message=FALSE}
+ggpairs(stats_apps_cor)
+data_apps_all %>% group_by(ipadSc_urls.num) %>% 
+  summarise(tot_rating = sum(rating_count_tot)) %>% 
+  mutate(ipadSc_urls.num = factor(ipadSc_urls.num, levels = ipadSc_urls.num[order(tot_rating, decreasing = T)])) %>% 
+  ggplot(., aes(x=ipadSc_urls.num, y=tot_rating, fill=ipadSc_urls.num))+
+  geom_bar(stat = 'identity')+
+  labs(x = "Captura de Pantalla de la APP antes de descargarla", y = "Num Total de Calificaciones", title="Número de calificaciones vs Captura de Pantalla de la APP" )+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size =14),axis.text.x = element_text(size = 8, hjust = 1), axis.text.y = element_text(size = 8),legend.position = "none")
+```
+
+En este caso, las aplicaciones con mayor numero de capturas consiguen mayor numero de calificaciones (numero de descargas) sin embargo, podemos ver que el numero de las siguientes son 0. Al observar este dato, investigamos la dinámica y el proceso de una app para tener ScreenShot en el AppleStore; si es cierto que para la fecha Julio 2017, Apple aún permitía lanzar aplicaciones sin Capturas de Pantalla y con un máximo de 5. En la actualidad se permiten hasta un máximo de 10 por demanda de los desarrolladores de aplicaciones.
+
+
 # Generar conjuntos de entrenamiento, test y validación
 
-Separamos el número de observaciones en dos bloques: el de Training (un 75\%) y el de Test (un 25\%). Además,
-para realizar una simulación de lo que ocurrirá al probar los datos de Test, dividimos el conjunto de Training para obtener también un conjunto de validación, por lo que la proporción queda de la siguiente manera respecto del número total de observaciones:
+Separamos el número de observaciones en dos bloques: el de Training (un 75\%) y el de Test (un 25\%). 
+Además, para realizar una simulación de lo que ocurrirá al probar los datos de Test, dividimos el conjunto de Training para obtener también un conjunto de validación, por lo que la proporción queda de la siguiente manera respecto del número total de observaciones:
 
 * Training: 50\%
 * Validación: 25\%
@@ -376,8 +445,7 @@ ggplot(data=data_train, aes(x=log10(rating_count_tot)))+
   labs(x = "Numero de Calificaciones total", y ="Frecuencia" , title = "HISTOGRAMA NÚMERO DE CALIFICACIONES TOTALES", subtitle = "Log")+theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
-
-**Comentar que si no hubiéramos separado los dos data frame, se nos eliminarían 929 datos, que pertenecen a los valores 0 de la variable al aplicar el logaritmo**.
+Es importante recalcar, que de no haber eliminado al inicio los valores cuyo rating_count_tot correspondian a 0, al aplicar logaritmo se hubieran eliminado de igual manera, aun asi, lo mejor era eliminarlo y trabajar en función de los datos de interés. Puesto que son pocas observaciones, estos valores 0 no son suficientes como para tener un modelo adicional.
 
 Analizamos los cuantiles de los datos.
 
@@ -396,7 +464,8 @@ top_10 <- data_train %>% top_n(10, rating_count_tot)
 (nrow(top_10)/nrow(data_train))*100
 ```
 
-Añadimos la variable transformada al data_train
+Añadimos la variable transformada al data_train ya que esta distribución nos permitira trabajar con el modelo de una manera mas eficiente.
+
 
 ```{r}
 data_train <- data_train %>%
@@ -427,7 +496,7 @@ data_train <- merge (x=data_train, y=Mb, by="X")
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data_train, aes(x=size_bytes)) +
   geom_histogram(bins=10, fill='steelblue')+
-  labs(x = "Peso de la Aplicación" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN", subtitle = "Bytes")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
+ labs(x = "Peso de la Aplicación" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
 Observamos que la mayoría se encuentra ubicada hacia el cero, por ende aplicaremos un logaritmo y así poder apreciar su distribución
@@ -438,6 +507,8 @@ ggplot(data_train, aes(x=log10(size_bytes))) +
   labs(x = "Peso de la Aplicación" , y ="Frecuencia" , title = "HISTOGRAMA PESO DE LA APLICACIÓN", subtitle = "Log10")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
+Al igual que la variable anterior, su distribución se "normaliza" un poco. 
+ 
 Añadimos la variable transformada al data_train
 
 ```{r}
@@ -476,7 +547,7 @@ data_train <- data_train %>%
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
 ggplot(data_train, aes(x=(lang.num))) +
   geom_histogram(bins=10, fill='steelblue')+
-  labs(x = "Nº de Idiomas" , y ="Frecuencia" , title = "HISTOGRAMA Nº IDIOMAS")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
+  labs(x = "Nº de Idiomas" , y ="Frecuencia" , title = "HISTOGRAMA Nº IDIOMAS", subtitle = "log10")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
 
@@ -492,6 +563,14 @@ Añadimos la variable transformada al data_train
 ```{r}
 data_train <- data_train %>%
   mutate(lang.num_new = log10(1+(lang.num)))
+```
+
+## Variable Screen Shot
+
+```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=6, fig.height=4, echo=FALSE, message=FALSE}
+ggplot(data_train, aes(x=(data_train$ipadSc_urls.num))) +
+  geom_histogram(bins=10, fill='steelblue')+
+  labs(x = "Nº de Idiomas" , y ="Frecuencia" , title = "HISTOGRAMA CAPTURA DE PANTALLA")+ theme(plot.title = element_text(hjust = 0.5, face="bold", size =12), plot.subtitle =element_text(hjust = 0.5, face ="bold", size=10), axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_text(size = 10))
 ```
 
 # Procesado de variables cualitativas
@@ -719,19 +798,7 @@ data_train_clean <- data_train %>%
   select(-c(track_name, ver, cont_rating, currency, prime_genre, rating_count_tot, rating_count_ver, X, id))
 ```
 
-```{r message=FALSE, warning=FALSE}
-# Calculamos los "Best subsets"
-regfit_full <- leaps::regsubsets(rating_count_tot_new~., data_train_clean, method='forward')
-
-reg_sum <- summary(regfit_full)
-
-plot(regfit_full, scale="adjr2")
-```
-
-```{r}
-data_coef <- coef(regfit_full, 9)
-as.data.frame(data_coef)
-```
+Usamos el método "Forward" para realizar la selección automática de variables. Nos basamos en el valor de R-cuadrado ajustado.
 
 ```{r echo=FALSE, warning=FALSE}
 # Semilla
@@ -740,7 +807,7 @@ set.seed(1)
 # Forward
 regfit_full_fwd <- leaps::regsubsets(rating_count_tot_new~., data_train_clean, method='forward')
 
-reg_sum_fwd <- summary(regfit_full)
+reg_sum_fwd <- summary(regfit_full_fwd)
 
 plot(regfit_full_fwd, scale="adjr2")
 ```
@@ -754,8 +821,11 @@ as.data.frame(data_coef_fwd)
 
 ## Definición del modelo
 
-```{r}
-lm_fit <- lm(rating_count_tot_new~., data=data_train_clean)
+```{r} 
+data_train_modelo_fwd <- subset(data_train_clean, select=c(rating_count_tot_new, user_rating, user_rating_ver, ipadSc_urls.num, size_bytes_new, lang.num_new,
+                                                           rating_12, rating_9, Lifestyle_genre, Utilities_genre))
+
+lm_fit <- lm(rating_count_tot_new~., data=data_train_modelo_fwd)
 summary(lm_fit)
 ```
 
@@ -788,9 +858,15 @@ Para comprobar si el modelo es válido, debemos analizar los residuos:
 hist(lm_fit$resid, main="Histograma de los residuos", ylab="Residuos")
 ```
 
+Además deberíamos comprobar lo siguiente: 
 * La media de los residuos es cero y también la suma de estos.
+* Los residuos se distribuyen normalmente.
+* Los residuos son independientes.
+* Los residuos tienen varianza constante (Homocedasticidad).
 
-* Los residuos se distribuyen normalmente
+De los puntos anteriores hemos comprobado si los residuos de sitribuyen normalmente o no y si son independientes.
+
+### Normalidad.
 
 ```{r}
 #Q-Q Plot
@@ -801,10 +877,10 @@ qqline(lm_fit$resid)
 sw_test <- shapiro.test(lm_fit$resid)
 ```
 
-* Los residuos son independientes
+### Independencia
 
 ```{r}
 dwtest(lm_fit) #Test for independence of residuals
 ```
-* Los residuos tienen varianza constante (Homocedasticidad).
+
 
