@@ -203,11 +203,8 @@ data_apps_all %>% group_by(lang.num) %>%
 ```
 
 Cuando observamos esta gráfico observamos que el comportamiento es un tanto peculiar, la mayoría de las aplicaciones con mayor numero de calificaciones se mantienen entre 1-10 idiomas, mientras que las que se encuentran traducidas a mas de 50 idiomas no. Lo que nos lleva a pensar que esta variable no esta directamente relacionada con nuestra variable de interés, sin embargo, lo que si esta directamente relacionado es que ese idioma aunque fuese 1-2 son los idiomas que mas demandan tienen en el mercado: Ingles, chino, etc… 
-  select(price:user_rating_ver, ipadSc_urls.num,
 
-         sup_devices.num, lang.num, size_bytes)
 ```{r, warning= FALSE, fig.align='center', fig.show='hold', fig.width=8, fig.height=3, echo=FALSE, message=FALSE}
-ggpairs(stats_apps_cor)
 data_apps_all %>% group_by(ipadSc_urls.num) %>% 
   summarise(tot_rating = sum(rating_count_tot)) %>% 
   mutate(ipadSc_urls.num = factor(ipadSc_urls.num, levels = ipadSc_urls.num[order(tot_rating, decreasing = T)])) %>% 
@@ -215,7 +212,7 @@ data_apps_all %>% group_by(ipadSc_urls.num) %>%
   geom_bar(stat = 'identity')+
   labs(x = "Captura de Pantalla de la APP antes de descargarla", y = "Num Total de Calificaciones", title="Número de calificaciones vs Captura de Pantalla de la APP" )+
   theme(plot.title = element_text(hjust = 0.5, face="bold", size =14),axis.text.x = element_text(size = 8, hjust = 1), axis.text.y = element_text(size = 8),legend.position = "none")
-```
+``` 
 
 En este caso, las aplicaciones con mayor numero de capturas consiguen mayor numero de calificaciones (numero de descargas) sin embargo, podemos ver que el numero de las siguientes son 0. Al observar este dato, investigamos la dinámica y el proceso de una app para tener ScreenShot en el AppleStore; si es cierto que para la fecha Julio 2017, Apple aún permitía lanzar aplicaciones sin Capturas de Pantalla y con un máximo de 5. En la actualidad se permiten hasta un máximo de 10 por demanda de los desarrolladores de aplicaciones.
 
@@ -804,6 +801,15 @@ Usamos el método "Forward" para realizar la selección automática de variables
 # Semilla
 set.seed(1)
 
+# Renombramos variables para evitar errores
+colnames(data_train_clean)[14] <- "rating_12"
+colnames(data_train_clean)[15] <- "rating_17"
+colnames(data_train_clean)[16] <- "rating_4"
+colnames(data_train_clean)[17] <- "rating_9"
+
+colnames(data_train_clean)[21] <- "Lifestyle_genre"
+colnames(data_train_clean)[22] <- "Utilities_genre"
+
 # Forward
 regfit_full_fwd <- leaps::regsubsets(rating_count_tot_new~., data_train_clean, method='forward')
 
@@ -821,13 +827,42 @@ as.data.frame(data_coef_fwd)
 
 ## Definición del modelo
 
-```{r} 
-data_train_modelo_fwd <- subset(data_train_clean, select=c(rating_count_tot_new, user_rating, user_rating_ver, ipadSc_urls.num, size_bytes_new, lang.num_new,
-                                                           rating_12, rating_9, Lifestyle_genre, Utilities_genre))
+```{r warning=FALSE}
 
+data_train_modelo_fwd <- data_train_clean %>%
+  select(rating_count_tot_new, user_rating, user_rating_ver, ipadSc_urls.num,
+         size_bytes_new, lang.num_new, rating_12, rating_9, Lifestyle_genre, Utilities_genre)
+```
+
+
+```{r}
+# Semilla
+set.seed(1)
+
+# Modelo
 lm_fit <- lm(rating_count_tot_new~., data=data_train_modelo_fwd)
 summary(lm_fit)
 ```
+
+Utilizaremos el método Forward que al igual que los otros métodos utilizados forman parte de las estrategias de regresión gradual, la cuál consiste en la agregación y eliminación de los predictores, en búsca de encontrar el subconjunto de variables con mayor rendimiento para el modelo.
+
+En el caso del modelo elegido, los predictores se van agregando según su contribución al modelo y se maximiza el resultado con la mayor significación obtenida. Al generar el modelo Forward, encontramos los siguientes resultados:
+
+Nivel de significación:
+
+- Encontramos 4 variables significativas al 0, lo que significa un alto grado de evidencia estadística, entre ellas se encuentra: La variable “User_rating”, “User_rating_ver”, “Lang.num_new”, “rating_12”.
+- Además, las variable “Rating_9” es significativa en un menor grado que las anteriormente nombradas, aunque con un alto grado de significación.
+
+Por lo que, la seleción de variables automática nos daría cómo resultado estas 6 variables:
+
+1.  User_rating.
+2.  User_rating_ver.
+3.  lang.num_new
+4.  Rating_12
+5.  Rating_9
+
+R ajustado:
+Hemos obtenido la cifra de 0.153, el cuál establece el grado de intensidad de las variables independientes, por lo que la variable dependiente, en nuestro caso “Rating_count_tot_new”, es explicada al 15.3% por las variables selecionadas.
 
 ## Interpretación de resultados
 
@@ -875,7 +910,10 @@ qqline(lm_fit$resid)
 
 # Contraste de normalidad
 sw_test <- shapiro.test(lm_fit$resid)
+sw_test
 ```
+
+Al observar el gráfico Q-Q, sí que parece que los errores se distribuyen de una manera bastante normal, aunque al ejecutar el test de Shapiro-Wilk obtenemos un p-valor muy bajo.
 
 ### Independencia
 
@@ -884,3 +922,16 @@ dwtest(lm_fit) #Test for independence of residuals
 ```
 
 
+El estadístico de Durbin-Watson toma valor 2 cuando los residuos son completamente independientes (entre 1.5 y 2.5 se considera que
+existe independencia). Un valor menor que 2 indica autocorrelación positiva y mayor que dos indica autocorrelación negativa. En nuestro caso, estamos muy cerca del 1.5, por lo que podríamos decir que existe independencia.
+
+# Conclusiones de la práctica
+
+El data set no presenta una cantidad de variables considerables para estimar su *Número de Descargas* (aproximado al número de valoraciones totales) a través de un modelo de Regresión Lineal, sin embargo, en base al estudio del dominio y las variables presentes en el data set podemos resaltar lo siguiente:
+
+-	El tamaño de las aplicaciones puede alterar el éxito de una aplicación, la mayoría de las aplicaciones hoy en día se basan en la facibilidad que tiene tenerlas en el móvil.
+-	El rating de las aplicaciones aunque no parece ser un determinante, sí que es cierto que el valor que mas se repite corresponde a un 4.5 .
+-	El idioma, es una variable que se comporta un tanto peculiar, sin embargo es algo que se debe estudiar a fondo porque ya mas que importar la cantidad de idiomas a los que se encuentra traducido importa en que idiomas se encuentra traducido.
+-	El género influye directamente, ya que la mayoría de las aplicaciones son para el disfrute y entretenimiento.
+
+A manera de cierre, recalcar que la popularidad (aceptación y/o fama) es un término un tanto complejo, si bien es cierto existen diversos patrones que te permiten relacionar qué variables contribuyen a que suceda, pero debe conocerse el dominio en un gran nivel para plantear criterios y tomar decisiones acordes.
