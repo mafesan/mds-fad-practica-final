@@ -47,6 +47,7 @@ library(wesanderson)
 
 library(GGally)
 
+library(fs)
 # Semilla inicial
 set.seed(1)
 ```
@@ -935,3 +936,18 @@ El data set no presenta una cantidad de variables considerables para estimar su 
 -	El género influye directamente, ya que la mayoría de las aplicaciones son para el disfrute y entretenimiento.
 
 A manera de cierre, recalcar que la popularidad (aceptación y/o fama) es un término un tanto complejo, si bien es cierto existen diversos patrones que te permiten relacionar qué variables contribuyen a que suceda, pero debe conocerse el dominio en un gran nivel para plantear criterios y tomar decisiones acordes.
+
+# Continuación de la práctica - 2º trimestre
+
+Exportamos los dataframes a ficheros CSV, para poder seguir parte del análisis desde Python.
+
+```{r}
+# Nombramos y creamos la carpeta nueva donde exportamos los archivos
+export_dir <- "exported-dataframes"
+dir.create(export_dir)
+
+# Exportamos los dataframes a ficheros CSV
+write.csv(data_train, path(export_dir, "apps_data_train", ext=".csv"))
+write.csv(data_train_clean, path(export_dir, "apps_data_train_clean", ext=".csv"))
+write.csv(data_test, path(export_dir, "apps_data_test", ext=".csv"))
+```
